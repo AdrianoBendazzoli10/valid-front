@@ -14,7 +14,8 @@ function CriarConta() {
   const [carregando, setCarregando] = useState(false);
 
   const navigate = useNavigate();
-  const API_URL = "http://127.0.0.1:8000";
+  const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+
 
   async function cadastrarUsuario(e) {
     e.preventDefault();

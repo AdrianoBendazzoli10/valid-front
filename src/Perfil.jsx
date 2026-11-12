@@ -75,7 +75,7 @@ function Perfil() {
         console.log("TOKEN NO PERFIL:", token);
 
         const resposta = await fetch(
-          "http://localhost:8000/perfil/",
+          "import.meta.env.VITE_API_URL || "${import.meta.env.VITE_API_URL || "http://localhost:8000"}/perfil/",
           {
             headers: {
               Authorization: `Bearer ${token}`
@@ -101,7 +101,7 @@ function Perfil() {
         setDoisFatoresAtivo(dados.dois_fatores_ativo ?? false);
 
         const respostaAnalises = await fetch(
-          "http://localhost:8000/analises/resumo",
+          "import.meta.env.VITE_API_URL || "${import.meta.env.VITE_API_URL || "http://localhost:8000"}/analises/resumo",
           {
             headers: {
               Authorization: `Bearer ${token}`
@@ -187,7 +187,7 @@ function Perfil() {
       const token = localStorage.getItem("token");
 
       const resposta = await fetch(
-        "http://localhost:8000/perfil/2fa",
+        "import.meta.env.VITE_API_URL || "${import.meta.env.VITE_API_URL || "http://localhost:8000"}/perfil/2fa",
         {
           method: "PUT",
           headers: {
