@@ -10,7 +10,7 @@ function Login() {
 
   const navigate = useNavigate();
 
-  const API_URL = "import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -161,7 +161,8 @@ function Login() {
               </button>
 
               <a
-                href="import.meta.env.VITE_API_URL || "${import.meta.env.VITE_API_URL || "http://localhost:8000"}/auth/google"
+                href={`${import.meta.env.VITE_API_URL || "http://localhost:8000"}/auth/google`}
+
                 className="btngoogle"
               >
                 Entrar com Google
