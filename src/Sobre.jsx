@@ -15,6 +15,8 @@ import fotobya from "./assets/img/fotobya.jpeg";
 import fotogaby from "./assets/img/fotogaby.jpeg";
 
 
+
+
 function AnimacaoSobre({ tipo = "rg" }) {
     return (
         <div className={`sobre-visual sobre-visual-${tipo}`}>
