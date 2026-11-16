@@ -30,7 +30,7 @@ function Footer() {
         e.preventDefault();
 
         try {
-            const resposta = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:8000"}/contato/`, {
+            const resposta = await fetch(`${import.meta.env.VITE_API_URL || "https://valid-back.onrender.com"}/contato/`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

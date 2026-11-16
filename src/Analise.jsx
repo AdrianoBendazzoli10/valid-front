@@ -127,7 +127,7 @@ function Analise() {
 
             if (token) {
                 try {
-                    const salvo = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:8000"}/analises/`, {
+                    const salvo = await fetch(`${import.meta.env.VITE_API_URL || "https://valid-back.onrender.com"}/analises/`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
