@@ -11,7 +11,7 @@ function Verificar2FA() {
 
   const navigate = useNavigate();
 
-  const API_URL = import.meta.env.VITE_API_URL || "https://valid-back.onrender.com";
+  const API_URL = import.meta.env.VITE_VALID_API_URL || "eocr-pixel-mescla-production.up.railway.app";
 
 
   const [email, setEmail] = useState(
