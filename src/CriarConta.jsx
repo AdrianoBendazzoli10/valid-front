@@ -14,7 +14,7 @@ function CriarConta() {
   const [carregando, setCarregando] = useState(false);
 
   const navigate = useNavigate();
-  const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+  const API_URL = import.meta.env.VITE_API_URL || "https://valid-back.onrender.com";
 
 
   async function cadastrarUsuario(e) {
@@ -67,7 +67,7 @@ function CriarConta() {
       alert(
         "Não foi possível conectar ao servidor do VALID.\n\n" +
         "Verifique se o backend está rodando em " +
-        "http://127.0.0.1:8000."
+        "https://valid-back.onrender.com"
       );
     } finally {
       setCarregando(false);
