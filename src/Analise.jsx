@@ -63,7 +63,7 @@ function Analise() {
 
         try {
             const resposta = await fetch(
-                "https://valid-back.onrender.com/valid/comparar",
+                "https://eocr-pixel-mescla-production.up.railway.app//valid/comparar",
                 {
                     method: "POST",
                     body: dados
@@ -108,7 +108,7 @@ function Analise() {
 
 
         try {
-            const resposta = await fetch("https://valid-back.onrender.com/analisar", {
+            const resposta = await fetch("https://eocr-pixel-mescla-production.up.railway.app//analisar", {
                 method: "POST",
                 body: dados,
             });
@@ -127,7 +127,7 @@ function Analise() {
 
             if (token) {
                 try {
-                    const salvo = await fetch(`${import.meta.env.VITE_API_URL || "https://valid-back.onrender.com"}/analises/`, {
+                    const salvo = await fetch(`${import.meta.env.VITE_API_URL || "https://eocr-pixel-mescla-production.up.railway.app/"}/analises/`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -180,7 +180,7 @@ function Analise() {
             };
 
             const resposta = await fetch(
-                "https://valid-back.onrender.com/gerar_pdf",
+                "https://eocr-pixel-mescla-production.up.railway.app//gerar_pdf",
                 {
                     method: "POST",
                     headers: {
@@ -1128,7 +1128,7 @@ function Analise() {
                                         </div>
                                         <div className="imagem-container">
                                             <img
-                                                src={`https://valid-back.onrender.com/results/block_heatmap.png?v=${versaoImagem}`}
+                                                src={`https://eocr-pixel-mescla-production.up.railway.app//results/block_heatmap.png?v=${versaoImagem}`}
                                                 alt="Heatmap da análise de pixels"
                                             />
                                         </div>
@@ -1143,7 +1143,7 @@ function Analise() {
                                         </div>
                                         <div className="imagem-container">
                                             <img
-                                                src={`https://valid-back.onrender.com/results/hybrid_analysis.png?v=${versaoImagem}`}
+                                                src={`https://eocr-pixel-mescla-production.up.railway.app//results/hybrid_analysis.png?v=${versaoImagem}`}
                                                 alt="Resultado visual da análise EOCR"
                                             />
                                         </div>
@@ -1158,7 +1158,7 @@ function Analise() {
                                         </div>
                                         <div className="imagem-container">
                                             <img
-                                                src={`https://valid-back.onrender.com/results/continuity_heatmap.png?v=${versaoImagem}`}
+                                                src={`https://eocr-pixel-mescla-production.up.railway.app//results/continuity_heatmap.png?v=${versaoImagem}`}
                                                 alt="Heatmap de continuidade dos pixels"
                                             />
                                         </div>

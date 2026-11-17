@@ -6,9 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/analisar': 'https://valid-back.onrender.com',
-      '/valid': 'https://valid-back.onrender.com',
-      '/results': 'https://valid-back.onrender.com',
+      '/analisar': 'https://eocr-pixel-mescla-production.up.railway.app/',
+      '/valid': 'https://eocr-pixel-mescla-production.up.railway.app/',
+      '/results': 'https://eocr-pixel-mescla-production.up.railway.app/',
     },
   },
 })
