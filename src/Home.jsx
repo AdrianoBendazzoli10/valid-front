@@ -48,7 +48,7 @@ function Home() {
                 </p>
 
                 <div className="hero-acoes">
-                  <Link to="/analise" className="hero-botao">
+                  <Link to="/Login" className="hero-botao">
                     Analisar documento
                     <FaArrowRight />
                   </Link>
