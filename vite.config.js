@@ -6,9 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/analisar': 'http://127.0.0.1:5000',
-      '/valid': 'http://127.0.0.1:5000',
-      '/results': 'http://127.0.0.1:5000',
+      '/analisar': 'https://valid-back.onrender.com',
+      '/valid': 'https://valid-back.onrender.com',
+      '/results': 'https://valid-back.onrender.com',
     },
   },
 })

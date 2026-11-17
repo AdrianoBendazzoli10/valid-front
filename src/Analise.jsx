@@ -63,7 +63,7 @@ function Analise() {
 
         try {
             const resposta = await fetch(
-                "http://127.0.0.1:5000/valid/comparar",
+                "https://valid-back.onrender.com/valid/comparar",
                 {
                     method: "POST",
                     body: dados
@@ -108,7 +108,7 @@ function Analise() {
 
 
         try {
-            const resposta = await fetch("http://127.0.0.1:5000/analisar", {
+            const resposta = await fetch("https://valid-back.onrender.com/analisar", {
                 method: "POST",
                 body: dados,
             });
@@ -180,7 +180,7 @@ function Analise() {
             };
 
             const resposta = await fetch(
-                "http://127.0.0.1:5000/gerar_pdf",
+                "https://valid-back.onrender.com/gerar_pdf",
                 {
                     method: "POST",
                     headers: {
@@ -1128,7 +1128,7 @@ function Analise() {
                                         </div>
                                         <div className="imagem-container">
                                             <img
-                                                src={`http://127.0.0.1:5000/results/block_heatmap.png?v=${versaoImagem}`}
+                                                src={`https://valid-back.onrender.com/results/block_heatmap.png?v=${versaoImagem}`}
                                                 alt="Heatmap da análise de pixels"
                                             />
                                         </div>
@@ -1143,7 +1143,7 @@ function Analise() {
                                         </div>
                                         <div className="imagem-container">
                                             <img
-                                                src={`http://127.0.0.1:5000/results/hybrid_analysis.png?v=${versaoImagem}`}
+                                                src={`https://valid-back.onrender.com/results/hybrid_analysis.png?v=${versaoImagem}`}
                                                 alt="Resultado visual da análise EOCR"
                                             />
                                         </div>
@@ -1158,7 +1158,7 @@ function Analise() {
                                         </div>
                                         <div className="imagem-container">
                                             <img
-                                                src={`http://127.0.0.1:5000/results/continuity_heatmap.png?v=${versaoImagem}`}
+                                                src={`https://valid-back.onrender.com/results/continuity_heatmap.png?v=${versaoImagem}`}
                                                 alt="Heatmap de continuidade dos pixels"
                                             />
                                         </div>
