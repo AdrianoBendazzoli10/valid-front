@@ -1227,6 +1227,7 @@
   margin: 0;
 }
 
+/* cada item: texto à esquerda, botão (se existir) à direita */
 .item_seguranca {
   width: 100%;
   background: none;
@@ -1234,19 +1235,33 @@
   padding: 16px 4px;
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  gap: 16px;
   text-decoration: none;
+  color: inherit;
   justify-content: space-between;
   align-items: center;
+}
 
+/* linha separando um item do outro */
+.item_seguranca + .item_seguranca {
+  border-top: 1px solid #e6efec;
+}
 
+/* bloco de texto: título em cima, descrição embaixo */
+.item_seguranca > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
 }
 
 .btn_2fa {
 
   width: 100px;
   height: 35px;
+  flex-shrink: 0;
 
   border: none;
   border-radius: 20px;
@@ -1271,6 +1286,7 @@
 }
 
 .item_seguranca_titulo {
+  display: block;
   font-weight: 600;
   font-size: 0.95rem;
   color: #1a2b25;
@@ -1278,7 +1294,9 @@
 }
 
 .item_seguranca_desc {
+  display: block;
   font-size: 0.82rem;
+  line-height: 1.4;
   color: #7c8a85;
 }
 
@@ -1315,16 +1333,6 @@
 
   .btn_perfil_info {
     margin: 0 auto;
-  }
-
-  .item_seguranca_desc {
-    text-align: center;
-    justify-content: center;
-  }
-
-  .item_seguranca_titulo {
-    text-align: center;
-    justify-content: center;
   }
 }
 
@@ -1366,16 +1374,6 @@
   .item_seguranca {
     padding: 14px 0;
   }
-
-  .item_seguranca_titulo {
-    text-align: center;
-    justify-content: center;
-  }
-
-  .item_seguranca_desc {
-    text-align: center;
-    justify-content: center;
-  }
 }
 
 
@@ -1402,16 +1400,24 @@
     font-size: 0.9rem;
   }
 
+  /* em telas bem pequenas, o item empilha e centraliza */
+  .item_seguranca {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .item_seguranca > div {
+    align-items: center;
+  }
+
   .item_seguranca_titulo {
     font-size: 0.9rem;
     text-align: center;
-    justify-content: center;
   }
 
   .item_seguranca_desc {
     font-size: 0.75rem;
     text-align: center;
-    justify-content: center;
   }
 
   .img_info {
