@@ -1,3 +1,11 @@
+import artigo1 from "./assets/img/artigo1.jpeg";
+import artigo2 from "./assets/img/artigo2.jpeg";
+import artigo3 from "./assets/img/artigo3.jpeg";
+import artigo4 from "./assets/img/artigo4.jpeg";
+import artigo5 from "./assets/img/artigo5.jpeg";
+import artigo6 from "./assets/img/artigo6.jpeg";
+
+
 const artigos = [
     {
         id: 1,
@@ -5,7 +13,7 @@ const artigos = [
         descricao:
         "Conheça os desafios enfrentados por uma analista documental e como a tecnologia pode facilitar a identificação de fraudes e adulterações.",
         autor: "Equipe Valid",
-        imagem: "/imagens/artigo1.jpg",
+        imagem: artigo1,
 
         subtitulo: "Os desafios da análise documental",
 
@@ -40,7 +48,7 @@ const artigos = [
     descricao:
       "Conheça os desafios enfrentados por uma analista documental e como a tecnologia pode facilitar a identificação de fraudes e adulterações.",
     autor: "Equipe Valid",
-    imagem: "/imagens/artigo1.jpg",
+    imagem: artigo2,
 
     subtitulo: "Entrevistamos a analista de documentos Paula Campos, que compartilhou um pouco de sua rotina de análises documentais. ",
 
@@ -75,7 +83,7 @@ const artigos = [
     descricao:
         "Entenda como documentos falsificados podem causar prejuízos financeiros, comprometer a segurança das empresas e gerar riscos legais, e como a tecnologia pode ajudar a prevenir essas fraudes.",
     autor: "Equipe Valid",
-    imagem: "/imagens/artigo6.jpg",
+    imagem: artigo3,
 
     subtitulo: "Como o VALID pode ajudar nesse cenário?",
 
@@ -270,7 +278,7 @@ const artigos = [
     descricao:
         "Descubra como informações ocultas nos arquivos digitais podem revelar alterações, levantar suspeitas e contribuir para a identificação de documentos fraudulentos com o auxílio da tecnologia.",
     autor: "Equipe Valid",
-    imagem: "/imagens/artigo3.jpg",
+    imagem: artigo4,
 
     subtitulo: "Ensinando o projeto a ver por trás da imagem",
 
@@ -476,7 +484,7 @@ const artigos = [
     descricao:
         "Entenda como o OCR transforma imagens em texto e ajuda o VALID a extrair informações dos documentos, facilitando a análise de dados e a identificação de possíveis inconsistências.",
     autor: "Equipe Valid",
-    imagem: "/imagens/artigo4.jpg",
+    imagem: artigo5,
 
     subtitulo: "Ensinando o projeto a ler e comparar informações",
 
@@ -727,7 +735,7 @@ const artigos = [
     descricao:
         "Descubra como a análise dos pixels pode revelar sinais de edição e alterações em imagens, ajudando o VALID a identificar possíveis indícios de fraude em documentos digitais.",
     autor: "Equipe Valid",
-    imagem: "/imagens/artigo5.jpg",
+    imagem: artigo6,
 
     subtitulo: "Analisando os pequenos detalhes que formam uma imagem",
 

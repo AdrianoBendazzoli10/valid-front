@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { MdOutlineSecurity } from "react-icons/md";
 
@@ -12,278 +13,246 @@ function Planos() {
                     className={tipoPlano === "mensal" ? "ativo" : ""}
                     onClick={() => setTipoPlano("mensal")}
                 >
-                    Mensal
+                    Individual
                 </button>
 
                 <button
                     className={tipoPlano === "anual" ? "ativo" : ""}
                     onClick={() => setTipoPlano("anual")}
                 >
-                    Anual
+                    Empresarial
                 </button>
             </div>
 
             {tipoPlano === "mensal" ? (
 
-            <div className="cards-planos">
+                <div className="cards-planos">
 
-                <div className="card-plano card-plano-verde">
-                    <div className="div-nome-planos">
-                        <div className="icone-planos"><MdOutlineSecurity /></div>
-                        <h1>Gratuito</h1>
+                    {/* PLANO BÁSICO */}
+                    <div className="card-plano card-plano-verde">
+
+                        <div className="div-nome-planos">
+                            <div className="icone-planos">
+                                <MdOutlineSecurity />
+                            </div>
+                            <h1>Básico</h1>
+                        </div>
+
+                        <p>Ideal para quem está começando a utilizar o VALID.</p>
+
+                        <div className="beneficios">
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>10 análises mensais</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Acesso aos recursos da plataforma</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Relatórios de análise</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Histórico de análises</p>
+                            </div>
+                        </div>
+
+                        <div className="preco">
+                            <h1>R$ 24,90</h1>
+                            <h3>ao mês</h3>
+                            <p>R$ 2,49 por análise</p>
+                        </div>
+
+                        <div className="div-btn-planos">
+                            <a href="" className="btn-planos">Assinar</a>
+                        </div>
+
                     </div>
-                    <p>Ideal para quem quer testar a plataforma.</p>
 
-                    <div className="beneficios">
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>5 análises por mês</p>
+
+                    {/* PLANO PLUS */}
+                    <div className="card-plano card-plano-branco">
+
+                        <div className="div-nome-planos">
+                            <div className="icone-planos-branco">
+                                <MdOutlineSecurity />
+                            </div>
+                            <h1>Plus</h1>
                         </div>
 
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Relatórios básicos</p>
+                        <p>Mais análises para profissionais com demanda frequente.</p>
+
+                        <div className="beneficios">
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>20 análises mensais</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Acesso aos recursos da plataforma</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Relatórios de análise</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Histórico de análises</p>
+                            </div>
                         </div>
 
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Upload de documentos</p>
+                        <div className="preco">
+                            <h1>R$ 44,90</h1>
+                            <h3>ao mês</h3>
+                            <p>R$ 2,25 por análise</p>
                         </div>
 
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Suporte por e-mail</p>
+                        <div className="div-btn-planos">
+                            <a href="" className="btn-planos">Assinar</a>
                         </div>
+
                     </div>
 
-                    <div className="preco">
-                        <h1>R$ 0</h1>
-                        <h3>ao mês</h3>
-                    </div>
 
-                    <div className="div-btn-planos">
-                        <a href="" className="btn-planos">Começar Grátis</a>
+                    {/* PLANO PREMIUM */}
+                    <div className="card-plano card-plano-verde">
+
+                        <div className="div-nome-planos">
+                            <div className="icone-planos">
+                                <MdOutlineSecurity />
+                            </div>
+                            <h1>Premium</h1>
+                        </div>
+
+                        <p>Para quem precisa de maior capacidade de análise.</p>
+
+                        <div className="beneficios">
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>50 análises mensais</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Acesso aos recursos da plataforma</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Relatórios de análise</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Histórico de análises</p>
+                            </div>
+                        </div>
+
+                        <div className="preco">
+                            <h1>R$ 99,90</h1>
+                            <h3>ao mês</h3>
+                            <p>R$ 2,00 por análise</p>
+                        </div>
+
+                        <div className="div-btn-planos">
+                            <a href="" className="btn-planos">Assinar</a>
+                        </div>
+
                     </div>
 
                 </div>
-
-
-                <div className="card-plano card-plano-branco">
-                    <div className="div-nome-planos">
-                        <div className="icone-planos-branco"><MdOutlineSecurity /></div>
-                        <h1>Básico</h1>
-                    </div>
-                    <p>Perfeito para profissionais e pequenas empresas.</p>
-
-                    <div className="beneficios">
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>100 análises mensais</p>
-                        </div>
-
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Relatórios completos</p>
-                        </div>
-
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Histórico de análises</p>
-                        </div>
-
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Processamento rápido</p>
-                        </div>
-                    </div>
-
-                    <div className="preco">
-                        <h1>R$ XX,00 </h1>
-                        <h3>ao mês</h3>
-                    </div>
-
-                    <div className="div-btn-planos">
-                        <a href="" className="btn-planos">Assinar</a>
-                    </div>
-
-                </div>
-
-
-                <div className="card-plano card-plano-verde">
-                    <div className="div-nome-planos">
-                        <div className="icone-planos"><MdOutlineSecurity /></div>
-                        <h1>Pro</h1>
-                    </div>
-                    <p>Para empresas que necessitam de maior capacidade.</p>
-
-                    <div className="beneficios">
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>500 análises mensais</p>
-                        </div>
-
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Relatórios detalhados</p>
-                        </div>
-
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Histórico ilimitado</p>
-                        </div>
-
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Processamento rápido</p>
-                        </div>
-                    </div>
-
-                    <div className="preco">
-                        <h1>R$ XX,00 </h1>
-                        <h3>ao mês</h3>
-                    </div>
-
-                    <div className="div-btn-planos">
-                        <a href="" className="btn-planos">Assinar</a>
-                    </div>
-
-                </div>
-
-            </div>
 
             ) : (
 
-            <div className="cards-planos">
+                /* PLANO EMPRESARIAL */
+                <div className="cards-planos">
 
-                <div className="card-plano card-plano-verde">
-                    <div className="div-nome-planos">
-                        <div className="icone-planos"><MdOutlineSecurity /></div>
-                        <h1>Básico</h1>
-                    </div>
-                    <p>Perfeito para profissionais e pequenas empresas.</p>
+                    <div className="card-plano card-plano-verde card-plano-empresas">
 
-                    <div className="beneficios">
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>1.200 análises por ano</p>
+                        <div className="div-nome-planos">
+                            <div className="icone-planos">
+                                <MdOutlineSecurity />
+                            </div>
+                            <h1>VALID Empresas</h1>
                         </div>
 
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Relatórios completos</p>
+                        <p>
+                            Solução ideal para empresas, departamentos de RH e
+                            organizações que precisam realizar análises documentais
+                            em maior quantidade.
+                        </p>
+
+                        <div className="beneficios">
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>150 análises mensais</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Acesso a todos os recursos da plataforma</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Relatórios detalhados das análises</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Histórico completo de verificações</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Análise de documentos em maior volume</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Organização das verificações realizadas</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Identificação de possíveis alterações</p>
+                            </div>
+
+                            <div className="beneficio">
+                                <div className="icon-bene"><MdOutlineSecurity /></div>
+                                <p>Suporte para demandas empresariais</p>
+                            </div>
+
                         </div>
 
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Histórico de 90 dias</p>
+                        <div className="preco">
+                            <h1>R$ 224,90</h1>
+                            <h3>ao mês</h3>
+                            <p>150 análises | Aproximadamente R$ 1,50 por análise</p>
                         </div>
 
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Processamento rápido</p>
+                        <div className="div-btn-planos">
+                            <a href="" className="btn-planos">
+                                Assinar plano empresarial
+                            </a>
                         </div>
 
-                    </div>
-
-                    <div className="preco">
-                        <h1>R$ XX,00</h1>
-                        <h3>ao ano</h3>
-                    </div>
-
-                    <div className="div-btn-planos">
-                        <a href="" className="btn-planos">Assinar</a>
-                    </div>
-
-                </div>
-
-
-                <div className="card-plano card-plano-branco">
-                    <div className="div-nome-planos">
-                        <div className="icone-planos-branco"><MdOutlineSecurity /></div>
-                        <h1>Pro</h1>
-                    </div>
-                    <p>Para empresas que necessitam de maior capacidade.</p>
-
-                    <div className="beneficios">
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>6.000 análises por ano</p>
-                        </div>
-
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Relatórios detalhados</p>
-                        </div>
-
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Histórico ilimitado</p>
-                        </div>
-
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Suporte por chat</p>
-                        </div>
-                    </div>
-
-                    <div className="preco">
-                        <h1>R$ XX,00</h1>
-                        <h3>ao ano</h3>
-                    </div>
-
-                    <div className="div-btn-planos">
-                        <a href="" className="btn-planos">Assinar</a>
                     </div>
 
                 </div>
-
-
-                <div className="card-plano card-plano-verde">
-                    <div className="div-nome-planos">
-                        <div className="icone-planos"><MdOutlineSecurity /></div>
-                        <h1>Ilimitado</h1>
-                    </div>
-                    <p>Ideal para grandes corporações e alta demanda.</p>
-
-                    <div className="beneficios">
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Análises anuais ilimitadas</p>
-                        </div>
-
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Relatórios avançados com IA</p>
-                        </div>
-
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>Histórico ilimitado</p>
-                        </div>
-
-                        <div className="beneficio">
-                            <div className="icon-bene"><MdOutlineSecurity /></div>
-                            <p>processamento instantâneo</p>
-                        </div>
-                    </div>
-
-                    <div className="preco">
-                        <h1>R$ XX,00 </h1>
-                        <h3>ao ano</h3>
-                    </div>
-
-                    <div className="div-btn-planos">
-                        <a href="" className="btn-planos">Assinar</a>
-                    </div>
-
-                </div>
-
-            </div>
 
             )}
 
         </div>
-
     );
 }
 

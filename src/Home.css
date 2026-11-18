@@ -1183,7 +1183,7 @@
 
   /* Público-alvo */
   .publico-alvo {
-    padding-bottom: 45px;
+    padding-bottom: 0px;
   }
 
   .cards-home2 {
@@ -1323,3 +1323,157 @@
     transition: none;
   }
 }
+
+
+/* ==========================================
+   HERO VALID — RESPONSIVIDADE MOBILE
+========================================== */
+
+@media (max-width: 991px) {
+    .inicial .hero-valid .text-branco {
+        width: 100%;
+        max-width: 650px;
+        margin: 0 auto;
+        font-size: clamp(2.2rem, 5vw, 2.8rem);
+        line-height: 1.2;
+        letter-spacing: -1px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 550px) {
+    .inicial .fundoverde.hero-valid {
+        padding: 42px 22px 45px;
+    }
+
+    .inicial .hero-valid .div-col-inicial {
+        width: 100%;
+        max-width: 100%;
+        flex: 0 0 100%;
+        padding: 0;
+    }
+
+    .inicial .hero-valid .hero-valid-texto {
+        width: 100%;
+        max-width: 100%;
+        padding: 0;
+    }
+
+    .inicial .hero-valid .text-branco {
+        width: 100%;
+        max-width: 390px;
+        margin: 0 auto;
+        font-size: clamp(2rem, 8vw, 2.5rem);
+        line-height: 1.17;
+        letter-spacing: -1.2px;
+        text-align: center;
+        overflow-wrap: normal;
+    }
+
+    .inicial .hero-valid .hero-descricao {
+        max-width: 350px;
+        margin: 18px auto 0;
+        font-size: 0.94rem;
+        line-height: 1.7;
+        text-align: center;
+    }
+
+    .inicial .hero-valid .hero-acoes {
+        justify-content: center;
+        margin-top: 24px;
+    }
+
+    .inicial .hero-valid .hero-botao {
+        width: 100%;
+        max-width: 290px;
+    }
+}
+
+@media (max-width: 380px) {
+    .inicial .hero-valid .text-branco {
+        font-size: 1.9rem !important;
+        line-height: 1.2;
+        letter-spacing: -0.8px;
+    }
+
+    .inicial .hero-valid .hero-descricao {
+        font-size: 0.9rem;
+    }
+}
+
+
+/* ==========================================
+   RESPONSIVIDADE — CARDS PÚBLICO-ALVO
+========================================== */
+
+/* Tablets */
+@media (max-width: 992px) {
+  .cards-home-inicial {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 25px;
+    padding: 0 20px;
+  }
+
+  .cards-home-inicial .cardhome2 {
+    flex: 1 1 calc(50% - 25px);
+    width: auto;
+    max-width: 400px;
+    min-width: 0;
+  }
+}
+
+/* Celulares */
+@media (max-width: 768px) {
+  .cards-home-inicial {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+    padding: 0 15px;
+  }
+
+  .cards-home-inicial .cardhome2 {
+    width: 100%;
+    max-width: 420px;
+    flex: none;
+    padding: 25px 20px;
+    margin: 0;
+  }
+
+  .cards-home-inicial .cardhome2 h2 {
+    font-size: 1.25rem;
+  }
+
+  .cards-home-inicial .cardhome2 p {
+    font-size: 0.93rem;
+    line-height: 1.6;
+  }
+
+  .cards-home-inicial .exemplos-doc {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .cards-home-inicial .exemplo-doc {
+    max-width: 100%;
+    text-align: center;
+  }
+}
+
+/* Celulares pequenos */
+@media (max-width: 380px) {
+  .cards-home-inicial {
+    padding: 0 10px;
+  }
+
+  .cards-home-inicial .cardhome2 {
+    padding: 22px 15px;
+  }
+}
+
+

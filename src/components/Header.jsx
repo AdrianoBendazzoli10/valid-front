@@ -22,7 +22,7 @@ function Header() {
                     <li><Link to="/">Home</Link></li>
                     <li><Link to="/sobre">Sobre</Link></li>
                     <li><Link to="/analise">Analisar com IA</Link></li>
-                    <li><Link to="/artigos">Artigos</Link></li>
+                    <li><Link to="/artigos">Blogs</Link></li>
                     <li><Link to="/assinaturas">Assinaturas</Link></li>
                 </ul>
             </nav>
