@@ -2,11 +2,52 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import BackToTop from "./components/BackToTop";
 import "./Analise.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LuDownload } from "react-icons/lu";
 import { FaFilePdf } from "react-icons/fa";
 import { GoShieldCheck, GoShield } from "react-icons/go";
 import { FaCheck } from "react-icons/fa6";
+
+
+// =========================================================
+// CONFIGURAÇÃO DA API
+// URL única, sem barra no final (evita "//" nas rotas).
+// Em produção, defina VITE_API_URL na hospedagem do front.
+// =========================================================
+const API_URL = (
+    import.meta.env.VITE_API_URL ||
+    "https://eocr-pixel-mescla-production.up.railway.app"
+).replace(/\/+$/, "");
+
+const TEMPO_LIMITE_MS = 120000; // 2 minutos
+
+
+// fetch com tempo limite, para o usuário não ficar preso no loading
+async function fetchComTimeout(url, options = {}, ms = TEMPO_LIMITE_MS) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+
+// Converte erros técnicos em mensagens amigáveis
+function mensagemDeErro(err, padrao) {
+    if (err?.name === "AbortError") {
+        return "O servidor demorou demais para responder. Tente novamente.";
+    }
+    if (err instanceof TypeError) {
+        return "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.";
+    }
+    if (err instanceof SyntaxError) {
+        return "O servidor retornou uma resposta inválida.";
+    }
+    return err?.message || padrao;
+}
 
 
 function Analise() {
@@ -28,6 +69,14 @@ function Analise() {
     const [detalheComparacao, setDetalheComparacao] = useState(false);
 
 
+    // Libera da memória a URL temporária do preview quando ela é trocada
+    useEffect(() => {
+        return () => {
+            if (preview) URL.revokeObjectURL(preview);
+        };
+    }, [preview]);
+
+
     // Manipulação de seleção do arquivo
     const handleArquivo = (file) => {
         if (file) {
@@ -43,6 +92,25 @@ function Analise() {
     const handleInputChange = (e) => {
         const file = e.target.files[0];
         handleArquivo(file);
+    };
+
+
+    // Arrastar e soltar no modo de comparação:
+    // preenche o primeiro slot vazio (doc 1, depois doc 2)
+    const handleDropComparacao = (file) => {
+        if (!file) return;
+
+        setErro("");
+        setResultadoComparacao(null);
+        setDetalheComparacao(false);
+
+        if (!arquivo) {
+            setArquivo(file);
+        } else if (!documento2) {
+            setDocumento2(file);
+        } else {
+            setDocumento2(file);
+        }
     };
 
 
@@ -62,13 +130,10 @@ function Analise() {
         dados.append("documento2", documento2);
 
         try {
-            const resposta = await fetch(
-                "http://127.0.0.1:5000/valid/comparar",
-                {
-                    method: "POST",
-                    body: dados
-                }
-            );
+            const resposta = await fetchComTimeout(`${API_URL}/valid/comparar`, {
+                method: "POST",
+                body: dados
+            });
 
             const json = await resposta.json();
 
@@ -82,8 +147,7 @@ function Analise() {
             setDetalheComparacao(false);
         } catch (err) {
             setErro(
-                err.message ||
-                "Não foi possível conectar ao comparador."
+                mensagemDeErro(err, "Não foi possível conectar ao comparador.")
             );
         } finally {
             setCarregando(false);
@@ -108,7 +172,7 @@ function Analise() {
 
 
         try {
-            const resposta = await fetch("http://127.0.0.1:5000/analisar", {
+            const resposta = await fetchComTimeout(`${API_URL}/analisar`, {
                 method: "POST",
                 body: dados,
             });
@@ -127,18 +191,22 @@ function Analise() {
 
             if (token) {
                 try {
-                    const salvo = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:8000"}/analises/`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${token}`
+                    const salvo = await fetchComTimeout(
+                        `${API_URL}/analises/`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                                nome_arquivo: arquivo.name,
+                                tamanho_bytes: arquivo.size,
+                                resultado: dadosRetornados
+                            })
                         },
-                        body: JSON.stringify({
-                            nome_arquivo: arquivo.name,
-                            tamanho_bytes: arquivo.size,
-                            resultado: dadosRetornados
-                        })
-                    });
+                        30000
+                    );
 
                     if (!salvo.ok) {
                         console.warn("Histórico não salvo:", await salvo.text());
@@ -152,7 +220,7 @@ function Analise() {
             setVersaoImagem(Date.now());
             setEtapa("resultado");
         } catch (err) {
-            setErro(err.message || "Não foi possível conectar ao servidor.");
+            setErro(mensagemDeErro(err, "Não foi possível conectar ao servidor."));
         } finally {
             setCarregando(false);
         }
@@ -179,16 +247,13 @@ function Analise() {
                 nome_arquivo: arquivo?.name || "documento_analisado"
             };
 
-            const resposta = await fetch(
-                "http://127.0.0.1:5000/gerar_pdf",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(dadosPDF)
-                }
-            );
+            const resposta = await fetchComTimeout(`${API_URL}/gerar_pdf`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(dadosPDF)
+            });
 
             if (!resposta.ok) {
 
@@ -229,8 +294,7 @@ function Analise() {
             console.error("Erro ao gerar PDF:", err);
 
             setErro(
-                err.message ||
-                "Não foi possível gerar o relatório PDF."
+                mensagemDeErro(err, "Não foi possível gerar o relatório PDF.")
             );
 
         } finally {
@@ -253,17 +317,41 @@ function Analise() {
 
 
     // Determina classe e status do resultado
-    const ehAutentico = () => {
+    // "autentico" só quando a classificação é explicitamente baixa.
+    // Média ou classificação não identificada => "atencao" (revisão manual).
+    const statusResultado = () => {
         const classif = obterClassificacao().toLowerCase();
-        return !classif.includes("alta");
+        if (classif.includes("alta")) return "suspeito";
+        if (classif.includes("baixa")) return "autentico";
+        return "atencao";
     };
 
 
     const classeResultado = () => {
-        const classif = obterClassificacao().toLowerCase();
-        if (classif.includes("alta")) return "alta";
-        if (classif.includes("média") || classif.includes("media")) return "media";
-        return "baixa";
+        const status = statusResultado();
+        if (status === "suspeito") return "alta";
+        if (status === "autentico") return "baixa";
+        return "media";
+    };
+
+
+    const tituloResultado = () => {
+        const status = statusResultado();
+        if (status === "suspeito") return "Suspeito";
+        if (status === "autentico") return "Autêntico";
+        return "Requer atenção";
+    };
+
+
+    const textoResultado = () => {
+        const status = statusResultado();
+        if (status === "suspeito") {
+            return "Seu documento foi analisado e foram identificadas possíveis inconsistências na estrutura ou pixels.";
+        }
+        if (status === "autentico") {
+            return "Seu documento foi analisado com sucesso e não foram identificados sinais significativos de alteração.";
+        }
+        return "Seu documento foi analisado e apresentou sinais moderados de inconsistência, ou a classificação não pôde ser determinada. Recomenda-se revisão manual.";
     };
 
 
@@ -279,7 +367,12 @@ function Analise() {
                 e.preventDefault();
                 setDragAtivo(false);
                 const file = e.dataTransfer.files[0];
-                handleArquivo(file);
+
+                if (modoComparacao) {
+                    handleDropComparacao(file);
+                } else {
+                    handleArquivo(file);
+                }
             }}
         >
             <Header />
@@ -1048,19 +1141,17 @@ function Analise() {
                         {etapa === "resultado" && (
                             <div className="resultado-area">
                                 <div className="icone-resultado">
-                                    {ehAutentico() ? <GoShieldCheck /> : <GoShield />}
+                                    {statusResultado() === "autentico" ? <GoShieldCheck /> : <GoShield />}
                                 </div>
 
 
                                 <h2>
-                                    {ehAutentico() ? "Autêntico" : "Suspeito"}
+                                    {tituloResultado()}
                                 </h2>
 
 
                                 <p>
-                                    {ehAutentico()
-                                        ? "Seu documento foi analisado com sucesso e não foram identificados sinais significativos de alteração."
-                                        : "Seu documento foi analisado e foram identificadas possíveis inconsistências na estrutura ou pixels."}
+                                    {textoResultado()}
                                 </p>
 
 
@@ -1073,7 +1164,10 @@ function Analise() {
 
                                 <button
                                     className="btn-acao"
-                                    onClick={() => setEtapa("relatorio")}
+                                    onClick={() => {
+                                        setErro("");
+                                        setEtapa("relatorio");
+                                    }}
                                 >
                                     Ver relatório completo
                                 </button>
@@ -1128,7 +1222,7 @@ function Analise() {
                                         </div>
                                         <div className="imagem-container">
                                             <img
-                                                src={`http://127.0.0.1:5000/results/block_heatmap.png?v=${versaoImagem}`}
+                                                src={`${API_URL}/results/block_heatmap.png?v=${versaoImagem}`}
                                                 alt="Heatmap da análise de pixels"
                                             />
                                         </div>
@@ -1143,7 +1237,7 @@ function Analise() {
                                         </div>
                                         <div className="imagem-container">
                                             <img
-                                                src={`http://127.0.0.1:5000/results/hybrid_analysis.png?v=${versaoImagem}`}
+                                                src={`${API_URL}/results/hybrid_analysis.png?v=${versaoImagem}`}
                                                 alt="Resultado visual da análise EOCR"
                                             />
                                         </div>
@@ -1158,7 +1252,7 @@ function Analise() {
                                         </div>
                                         <div className="imagem-container">
                                             <img
-                                                src={`http://127.0.0.1:5000/results/continuity_heatmap.png?v=${versaoImagem}`}
+                                                src={`${API_URL}/results/continuity_heatmap.png?v=${versaoImagem}`}
                                                 alt="Heatmap de continuidade dos pixels"
                                             />
                                         </div>
@@ -1290,7 +1384,6 @@ function Analise() {
                                 </div>
 
 
-                                {/* BOTÃO PARA VOLTAR */}
                                 {/* AÇÕES DO RELATÓRIO */}
                                 <div
                                     className="acoes-relatorio"
@@ -1322,7 +1415,10 @@ function Analise() {
                                     {/* BOTÃO VOLTAR */}
                                     <button
                                         className="btn-acao btn-fechar-rel"
-                                        onClick={() => setEtapa("resultado")}
+                                        onClick={() => {
+                                            setErro("");
+                                            setEtapa("resultado");
+                                        }}
                                         disabled={gerandoPDF}
                                     >
                                         Voltar para o Resultado
@@ -1396,4 +1492,3 @@ function Analise() {
 
 
 export default Analise;
-

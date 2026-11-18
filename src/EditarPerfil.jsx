@@ -29,7 +29,7 @@ function EditarPerfil() {
         const token = localStorage.getItem("token");
 
         const resposta = await fetch(
-          `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/perfil/`,
+          `${import.meta.env.VITE_API_URL || "https://valid-back.onrender.com"}/perfil/`,
           {
             headers: {
               Authorization: `Bearer ${token}`
@@ -80,7 +80,7 @@ function EditarPerfil() {
       const token = localStorage.getItem("token");
 
       const resposta = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/perfil/`,
+        `${import.meta.env.VITE_API_URL || "https://valid-back.onrender.com"}/perfil/`,
         {
           method: "PUT",
 

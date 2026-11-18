@@ -6,9 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/analisar': 'http://127.0.0.1:5000',
-      '/valid': 'http://127.0.0.1:5000',
-      '/results': 'http://127.0.0.1:5000',
+      '/analisar': 'https://eocr-pixel-mescla-production.up.railway.app/',
+      '/valid': 'https://eocr-pixel-mescla-production.up.railway.app/',
+      '/results': 'https://eocr-pixel-mescla-production.up.railway.app/',
     },
   },
 })
