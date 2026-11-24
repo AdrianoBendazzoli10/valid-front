@@ -46,7 +46,7 @@ function EditarPerfil() {
         setForm({
             nome: dados.nome || "",
             email: dados.email || "",
-            telefone: dados.telefone || "",
+            telefone: dados.telefone || "11966314620",
             dataCadastro: dados.dataCadastro || "",
             fotoUrl: dados.foto_url || ""
         });
@@ -93,7 +93,6 @@ function EditarPerfil() {
               nome: form.nome,
               email: form.email,
               telefone: form.telefone,
-              foto_url: form.fotoUrl
           })
         }
       );
