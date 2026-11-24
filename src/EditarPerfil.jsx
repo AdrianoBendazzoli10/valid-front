@@ -104,10 +104,11 @@ function EditarPerfil() {
           },
 
           body: JSON.stringify({
-              nome: form.nome,
-              email: form.email,
-              telefone: form.telefone,
-          })
+            nome: form.nome,
+            email: form.email,
+            telefone: form.telefone,
+            foto_url: form.fotoUrl || null
+})
         }
       );
 
