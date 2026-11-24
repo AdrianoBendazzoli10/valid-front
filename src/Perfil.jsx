@@ -230,16 +230,18 @@ function Perfil() {
           <div className="card_perfil_esquerda">
 
             <div className="foto_perfil">
-              {/* usuario.fotoUrl = URL da foto que veio do back-end
-                  ex: "https://sua-api.com/uploads/foto-123.jpg"
-                  Se não tiver foto, mostra uma imagem padrão */}
-              <img src={usuario.fotoUrl || tcc} alt="Foto de perfil" />
-            </div>
+              <img
+                src={usuario.foto_url || tcc}
+                alt="Foto de perfil"
+              />
+</div>
 
             <div>
               {/* usuario.nome e usuario.email vêm diretamente da resposta da API */}
               <p className="perfil_nome">{usuario.nome}</p>
               <p className="perfil_email">{usuario.email}</p>
+              <p className="perfil_telefone">{usuario.telefone}</p>
+              <p className="perfil_dataCadastro">{usuario.dataCadastro}</p>
             </div>
 
           </div>
