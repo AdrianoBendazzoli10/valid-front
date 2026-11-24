@@ -66,12 +66,23 @@ function EditarPerfil() {
   function handleChange(e) { setForm({ ...form, [e.target.name]: e.target.value }); }
 
   function handleFoto(e) {
-    const arquivo = e.target.files[0];
-    if (!arquivo) return;
-    const reader = new FileReader();
-    reader.onloadend = () => { setForm({ ...form, fotoUrl: reader.result }); };
-    reader.readAsDataURL(arquivo);
-  }
+  const arquivo = e.target.files[0];
+
+  if (!arquivo) return;
+
+  const reader = new FileReader();
+
+  reader.onloadend = () => {
+    setForm(prev => ({
+      ...prev,
+      fotoUrl: reader.result
+    }));
+
+    console.log("FOTO CARREGADA:", reader.result.length);
+  };
+
+  reader.readAsDataURL(arquivo);
+}
 
   async function handleSalvar() {
 
