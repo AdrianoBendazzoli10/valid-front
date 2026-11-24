@@ -44,11 +44,11 @@ function EditarPerfil() {
         const dados = await resposta.json();
 
         setForm({
-          nome: dados.nome,
-          email: dados.email,
-          telefone: "",
-          dataCadastro: "",
-          fotoUrl: ""
+            nome: dados.nome || "",
+            email: dados.email || "",
+            telefone: dados.telefone || "",
+            dataCadastro: dados.dataCadastro || "",
+            fotoUrl: dados.foto_url || ""
         });
 
       } catch (erro) {
@@ -90,8 +90,10 @@ function EditarPerfil() {
           },
 
           body: JSON.stringify({
-            nome: form.nome,
-            email: form.email
+              nome: form.nome,
+              email: form.email,
+              telefone: form.telefone,
+              foto_url: form.fotoUrl
           })
         }
       );
