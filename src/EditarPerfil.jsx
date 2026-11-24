@@ -15,7 +15,7 @@ function EditarPerfil() {
   const [form, setForm] = useState({
     nome: "",
     email: "",
-    telefone: "",
+    telefone: "11966314620",
     dataCadastro: "",
     fotoUrl: ""
   });
@@ -46,7 +46,7 @@ function EditarPerfil() {
         setForm({
             nome: dados.nome || "",
             email: dados.email || "",
-            telefone: dados.telefone || "11966314620",
+            telefone: dados.telefone || "",
             dataCadastro: dados.dataCadastro || "",
             fotoUrl: dados.foto_url || ""
         });
