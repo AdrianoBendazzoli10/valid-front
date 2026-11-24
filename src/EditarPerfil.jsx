@@ -79,6 +79,9 @@ function EditarPerfil() {
 
       const token = localStorage.getItem("token");
 
+      console.log("Tamanho da foto:", form.fotoUrl?.length);    
+      console.log("Início da foto:", form.fotoUrl?.substring(0, 50));
+      
       const resposta = await fetch(
         `${import.meta.env.VITE_API_URL || "https://valid-back.onrender.com"}/perfil/`,
         {
