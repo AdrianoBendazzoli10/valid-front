@@ -28,8 +28,6 @@ function Header() {
             </nav>
 
             <div className="actions">
-                <div className="icons">
-                    <IoSearch size={22} />
                     <Link to="/perfil">
                         <FaRegUser size={22} />
                     </Link>

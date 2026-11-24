@@ -961,6 +961,18 @@
   margin: 0;
 }
 
+.perfil_telefone{
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+}
+
+.perfil_dataCadastro{
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+}
+
 .card_perfil_direita {
   display: flex;
   flex-direction: column;
