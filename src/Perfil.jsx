@@ -89,13 +89,15 @@ function Perfil() {
 
         const dados = await resposta.json();
 
+        
         setUsuario({
-          nome: dados.nome,
-          email: dados.email,
-          telefone: "-",
-          dataCadastro: "-",
-          fotoUrl: null
+        nome: dados.nome,
+        email: dados.email,
+        telefone: dados.telefone || "Não informado",
+        dataCadastro: dados.dataCadastro || "Não informado",
+        foto_url: dados.foto_url || null
         });
+
 
 
         setDoisFatoresAtivo(dados.dois_fatores_ativo ?? false);
