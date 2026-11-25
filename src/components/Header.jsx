@@ -39,7 +39,7 @@ function Header() {
                 >
                     <FaBars />
                 </button>
-            </div>
+         
 
 
         </header>
