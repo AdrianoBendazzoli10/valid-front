@@ -5,7 +5,7 @@ import "./Analise.css";
 import { useState, useEffect } from "react";
 import { LuDownload } from "react-icons/lu";
 import { FaFilePdf } from "react-icons/fa";
-import { GoShieldCheck, GoShield } from "react-icons/go";
+import { GoShieldCheck, GoShield, GoAlert } from "react-icons/go";
 import { FaCheck } from "react-icons/fa6";
 
 
@@ -25,7 +25,169 @@ const BACKEND_API_URL = (
 ).replace(/\/+$/, "");
 
 const TEMPO_LIMITE_MS = 120000; // 2 minutos
+const TEMPO_LIMITE_HISTORICO_MS = 30000;
+const MAX_TRECHOS_VISIVEIS = 5;
 
+// Faixas do índice de suspeita (0 a 100) usadas para colorir o medidor e as
+// verificações. AJUSTE para os mesmos cortes que o backend usa para
+// classificar em Baixa / Média / Alta.
+const LIMITES = { medio: 30, alto: 60 };
+
+
+// =========================================================
+// TEXTOS E CONFIGURAÇÕES DO RESULTADO
+// =========================================================
+
+// Resultado da análise individual (chave = status calculado a partir da classificação)
+const VEREDITOS = {
+    autentico: {
+        nivel: "baixo",
+        Icone: GoShieldCheck,
+        titulo: "Nenhum sinal relevante de alteração",
+        resumo:
+            "O VALID não encontrou indícios importantes de que este documento foi editado.",
+        passos: [
+            "Você pode seguir com a conferência normal do documento.",
+            "Lembre-se: a ausência de sinais não garante que o documento seja verdadeiro."
+        ]
+    },
+    atencao: {
+        nivel: "medio",
+        Icone: GoShield,
+        titulo: "Vale conferir com mais atenção",
+        resumo:
+            "Foram encontrados alguns sinais que merecem uma segunda olhada, ou não foi possível chegar a uma conclusão segura.",
+        passos: [
+            "Veja abaixo quais pontos do documento chamaram atenção.",
+            "Confira o documento original ou peça uma nova via a quem o emitiu."
+        ]
+    },
+    suspeito: {
+        nivel: "alto",
+        Icone: GoAlert,
+        titulo: "Foram encontrados sinais de possível alteração",
+        resumo:
+            "O documento tem características comuns em arquivos editados. Isso não prova fraude, mas exige conferência.",
+        passos: [
+            "Não aceite o documento apenas com base nesta análise.",
+            "Peça o original ou confirme os dados diretamente com quem o emitiu.",
+            "Se necessário, encaminhe para uma perícia documentoscópica."
+        ]
+    }
+};
+
+const ROTULO_SUSPEITA = { baixo: "Baixa", medio: "Média", alto: "Alta" };
+
+const ROTULO_VERIFICACAO = {
+    baixo: "Nada fora do comum",
+    medio: "Algumas irregularidades",
+    alto: "Muitas irregularidades"
+};
+
+// O que o VALID verifica (chave = campo de analise_global)
+const VERIFICACOES = [
+    {
+        chave: "pixel_score",
+        titulo: "Aparência da imagem",
+        descricao:
+            "Procura trechos que parecem ter sido editados, colados ou apagados."
+    },
+    {
+        chave: "geometry_score",
+        titulo: "Texto do documento",
+        descricao:
+            "Verifica se letras e linhas estão alinhadas e espaçadas de forma natural."
+    }
+];
+
+const IMAGENS = [
+    {
+        arquivo: "block_heatmap.png",
+        titulo: "Mapa de áreas suspeitas",
+        legenda:
+            "Áreas destacadas indicam onde o VALID encontrou diferenças em relação ao restante do documento.",
+        alt: "Mapa de calor da análise de pixels"
+    },
+    {
+        arquivo: "hybrid_analysis.png",
+        titulo: "Trechos de texto analisados",
+        legenda: "Mostra os trechos de texto que o VALID encontrou e analisou.",
+        alt: "Resultado visual da análise do texto (EOCR)"
+    },
+    {
+        arquivo: "continuity_heatmap.png",
+        titulo: "Mapa de continuidade",
+        legenda:
+            "Mostra onde a textura da imagem muda de forma brusca, o que pode indicar emendas ou colagens.",
+        alt: "Mapa de calor da continuidade dos pixels"
+    }
+];
+
+// Resultado da comparação (chave = status devolvido pela API)
+const STATUS_COMPARACAO = {
+    COMPATIVEL: {
+        nivel: "baixo",
+        Icone: GoShieldCheck,
+        titulo: "Documentos compatíveis",
+        rotulo: "Compatível",
+        resumo:
+            "Os campos comparáveis encontrados nos dois documentos apresentam correspondência."
+    },
+    REQUER_REVISAO: {
+        nivel: "medio",
+        Icone: GoShield,
+        titulo: "Compatibilidade com ressalvas",
+        rotulo: "Requer revisão",
+        resumo:
+            "Os valores podem coincidir, mas há dados que exigem revisão de validade antes da conclusão."
+    },
+    "SEM DADOS SUFICIENTES": {
+        nivel: "neutro",
+        Icone: GoShield,
+        titulo: "Dados insuficientes",
+        rotulo: "Dados insuficientes",
+        resumo:
+            "Não foram encontrados campos suficientes para concluir a comparação com segurança."
+    }
+};
+
+const STATUS_COMPARACAO_PADRAO = {
+    nivel: "alto",
+    Icone: GoAlert,
+    titulo: "Documentos divergentes",
+    rotulo: "Divergente",
+    resumo: "Foram identificadas divergências entre os campos extraídos dos documentos."
+};
+
+const CAMPOS_COMPARACAO = [
+    { chave: "nome", titulo: "Nome" },
+    { chave: "cpf", titulo: "CPF" },
+    { chave: "data", titulo: "Data" }
+];
+
+const STATUS_CAMPO = {
+    COMPATIVEL: { rotulo: "Compatível", nivel: "baixo" },
+    PARCIALMENTE_COMPATIVEL: { rotulo: "Parcialmente compatível", nivel: "medio" },
+    AMBIGUO: { rotulo: "Ambíguo", nivel: "medio" },
+    INVALIDO: { rotulo: "Inválido", nivel: "alto" },
+    NAO_IDENTIFICADO: { rotulo: "Não identificado", nivel: "neutro" },
+    NAO_COMPARAVEL: { rotulo: "Não identificado", nivel: "neutro" }
+};
+
+const STATUS_CAMPO_PADRAO = { rotulo: "Divergente", nivel: "alto" };
+
+const VALIDACAO_CPF = {
+    valid: "Válido",
+    corrected: "Corrigido pelo OCR",
+    invalid: "Inválido",
+    ambiguous: "Ambíguo",
+    not_found: "Não identificado"
+};
+
+
+// =========================================================
+// FUNÇÕES AUXILIARES
+// =========================================================
 
 // fetch com tempo limite, para o usuário não ficar preso no loading
 async function fetchComTimeout(url, options = {}, ms = TEMPO_LIMITE_MS) {
@@ -55,6 +217,326 @@ function mensagemDeErro(err, padrao) {
 }
 
 
+// Salva a análise no histórico do usuário logado (falhas não bloqueiam o resultado)
+async function salvarNoHistorico(arquivo, resultado) {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+        const resposta = await fetchComTimeout(
+            `${BACKEND_API_URL}/analises/`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    nome_arquivo: arquivo.name,
+                    tamanho_bytes: arquivo.size,
+                    resultado
+                })
+            },
+            TEMPO_LIMITE_HISTORICO_MS
+        );
+
+        if (!resposta.ok) {
+            console.warn("Histórico não salvo:", await resposta.text());
+        }
+    } catch (falha) {
+        console.warn("API de histórico indisponível:", falha);
+    }
+}
+
+
+// Número formatado ou "—" quando o valor não existe
+function formatar(valor, casas = 1) {
+    const n = Number(valor);
+    return valor == null || valor === "" || !Number.isFinite(n)
+        ? "—"
+        : n.toFixed(casas);
+}
+
+
+function nivelDoScore(score) {
+    if (score >= LIMITES.alto) return "alto";
+    if (score >= LIMITES.medio) return "medio";
+    return "baixo";
+}
+
+
+function nivelDoTexto(texto = "") {
+    const t = String(texto).toLowerCase();
+    if (t.includes("alt")) return "alto";
+    if (t.includes("baix")) return "baixo";
+    return "medio";
+}
+
+
+// "autentico" só quando a classificação é explicitamente baixa.
+// Média ou não identificada => "atencao" (revisão manual).
+function obterStatus(classificacao = "") {
+    const c = classificacao.toLowerCase();
+    if (c.includes("alta")) return "suspeito";
+    if (c.includes("baixa")) return "autentico";
+    return "atencao";
+}
+
+
+function formatarValor(valor) {
+    if (Array.isArray(valor)) {
+        return valor.length ? valor.join(", ") : "Não identificado";
+    }
+    if (valor === null || valor === undefined || valor === "") {
+        return "Não identificado";
+    }
+    return String(valor);
+}
+
+
+// =========================================================
+// COMPONENTES PEQUENOS
+// =========================================================
+
+function ScannerLoading({ eyebrow, titulo, texto, status }) {
+    return (
+        <div className="scanner-loading">
+            <div className="scanner-particles">
+                {Array.from({ length: 8 }, (_, i) => (
+                    <span key={i}></span>
+                ))}
+            </div>
+
+            <div className="document-scanner">
+                <div className="fake-document">
+                    <div className="doc-top">
+                        <div className="doc-symbol"></div>
+                        <div className="doc-title-lines">
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+
+                    <div className="doc-line long"></div>
+                    <div className="doc-line medium"></div>
+                    <div className="doc-line short"></div>
+
+                    <div className="doc-block">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+
+                    <div className="doc-line long"></div>
+                    <div className="doc-line medium"></div>
+
+                    <div className="scanner-line">
+                        <div className="scanner-line-glow"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="loading-text">
+                <div className="loading-eyebrow">
+                    <span className="pulse-dot"></span>
+                    {eyebrow}
+                </div>
+                <h2>{titulo}</h2>
+                <p>{texto}</p>
+                <div className="loading-status">
+                    <span className="status-loader"></span>
+                    {status}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+// Faixa de resultado: ícone + título + explicação em uma frase
+function Veredito({ nivel, Icone, rotulo, titulo, resumo }) {
+    return (
+        <div className="veredito" data-nivel={nivel}>
+            <div className="veredito-icone">
+                <Icone />
+            </div>
+            <div className="veredito-texto">
+                <span className="mini-label">{rotulo}</span>
+                <h2>{titulo}</h2>
+                <p>{resumo}</p>
+            </div>
+        </div>
+    );
+}
+
+
+// Régua Baixo / Médio / Alto com um marcador na posição do índice
+function MedidorSuspeita({ score, nivel }) {
+    const valor = Math.min(Math.max(Number(score) || 0, 0), 100);
+
+    return (
+        <div
+            className="medidor"
+            data-nivel={nivel}
+            role="img"
+            aria-label={`Índice de suspeita: ${valor.toFixed(0)} de 100`}
+        >
+            <div
+                className="medidor-faixa"
+                style={{
+                    "--medio": `${LIMITES.medio}%`,
+                    "--alto": `${LIMITES.alto}%`
+                }}
+            >
+                <span
+                    className="medidor-marcador"
+                    style={{ left: `${valor}%` }}
+                ></span>
+            </div>
+
+            <div className="medidor-legenda">
+                <span style={{ flex: LIMITES.medio }}>Baixo</span>
+                <span style={{ flex: LIMITES.alto - LIMITES.medio }}>Médio</span>
+                <span style={{ flex: 100 - LIMITES.alto }}>Alto</span>
+            </div>
+        </div>
+    );
+}
+
+
+function Verificacao({ titulo, descricao, score }) {
+    const valor = Number(score) || 0;
+    const nivel = nivelDoScore(valor);
+
+    return (
+        <div className="verificacao" data-nivel={nivel}>
+            <div className="verificacao-topo">
+                <h4>{titulo}</h4>
+                <span className="chip">{ROTULO_VERIFICACAO[nivel]}</span>
+            </div>
+            <p>{descricao}</p>
+            <div className="barra">
+                <div style={{ width: `${Math.min(valor, 100)}%` }}></div>
+            </div>
+        </div>
+    );
+}
+
+
+function AvisoFerramenta() {
+    return (
+        <p className="aviso">
+            O VALID é uma ferramenta de apoio. Este resultado indica possíveis sinais de
+            alteração: não prova que o documento é falso, nem garante que seja verdadeiro.
+            Ele não substitui a perícia documentoscópica nem a conferência feita por
+            profissionais responsáveis.
+        </p>
+    );
+}
+
+
+function CartaoDocumento({ rotulo, arquivo, vazio, descricao, aoSelecionar }) {
+    return (
+        <div className={`comparacao-arquivo-card ${arquivo ? "selecionado" : ""}`}>
+            <div className="comparacao-arquivo-icone">
+                <FaFilePdf />
+            </div>
+
+            <span className="mini-label">{rotulo}</span>
+            <h3 title={arquivo?.name}>{arquivo ? arquivo.name : vazio}</h3>
+            <p>{descricao}</p>
+
+            <div className="btn-upload">
+                <label>
+                    {arquivo ? "Trocar documento" : "Selecionar documento"}
+                    <input
+                        type="file"
+                        hidden
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={aoSelecionar}
+                    />
+                </label>
+            </div>
+        </div>
+    );
+}
+
+
+function CampoComparacao({ campo, resultado }) {
+    const statusCampo = resultado.campos?.[campo.chave];
+    const info = statusCampo
+        ? STATUS_CAMPO[statusCampo] ?? STATUS_CAMPO_PADRAO
+        : STATUS_CAMPO.NAO_IDENTIFICADO;
+
+    const valores = resultado.detalhes?.valores?.[campo.chave];
+    const validacao = resultado.detalhes?.cpf_validacao;
+    const similaridade = Math.min(
+        Number(resultado.detalhes?.nome_similaridade ?? 0) * 100,
+        100
+    );
+
+    const traduzir = (status) => VALIDACAO_CPF[status] || status || "Não informado";
+    const cpfComRessalva =
+        ["invalid", "ambiguous"].includes(validacao?.documento1) ||
+        ["invalid", "ambiguous"].includes(validacao?.documento2);
+
+    return (
+        <div className="analise-card campo-card" data-nivel={info.nivel}>
+            <div className="campo-topo">
+                <h3>{campo.titulo}</h3>
+                <span className="chip">{info.rotulo}</span>
+            </div>
+
+            {valores && (
+                <div className="comparacao-valores">
+                    <div className="comparacao-valor-linha">
+                        <span>Documento 1</span>
+                        <strong>{formatarValor(valores.documento1)}</strong>
+                    </div>
+                    <div className="comparacao-valor-linha">
+                        <span>Documento 2</span>
+                        <strong>{formatarValor(valores.documento2)}</strong>
+                    </div>
+                </div>
+            )}
+
+            {campo.chave === "nome" && (
+                <>
+                    <div className="barra">
+                        <div style={{ width: `${similaridade}%` }}></div>
+                    </div>
+                    <p className="comparacao-similaridade">
+                        Semelhança entre os nomes: <strong>{similaridade.toFixed(1)}%</strong>
+                    </p>
+                </>
+            )}
+
+            {campo.chave === "cpf" && (
+                <div className="comparacao-validacao-cpf">
+                    <div className="comparacao-validacao-linha">
+                        <span>CPF do documento 1</span>
+                        <strong>{traduzir(validacao?.documento1)}</strong>
+                    </div>
+                    <div className="comparacao-validacao-linha">
+                        <span>CPF do documento 2</span>
+                        <strong>{traduzir(validacao?.documento2)}</strong>
+                    </div>
+
+                    {cpfComRessalva && (
+                        <p className="comparacao-alerta-validacao">
+                            Os valores podem ser iguais, mas a validade matemática do CPF requer revisão.
+                        </p>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+
+// =========================================================
+// PÁGINA
+// =========================================================
 function Analise() {
     const [etapa, setEtapa] = useState("upload"); // 'upload' | 'preview' | 'resultado' | 'relatorio'
     const [arquivo, setArquivo] = useState(null);
@@ -62,12 +544,12 @@ function Analise() {
     const [dragAtivo, setDragAtivo] = useState(false);
     const [gerandoPDF, setGerandoPDF] = useState(false);
 
-
-    // Estados para integração com a API
     const [resultadoAPI, setResultadoAPI] = useState(null);
     const [carregando, setCarregando] = useState(false);
     const [erro, setErro] = useState("");
     const [versaoImagem, setVersaoImagem] = useState(Date.now());
+    const [mostrarTodosTrechos, setMostrarTodosTrechos] = useState(false);
+
     const [modoComparacao, setModoComparacao] = useState(false);
     const [documento2, setDocumento2] = useState(null);
     const [resultadoComparacao, setResultadoComparacao] = useState(null);
@@ -82,43 +564,74 @@ function Analise() {
     }, [preview]);
 
 
-    // Manipulação de seleção do arquivo
+    // ---------------------------------------------------------
+    // Seleção de arquivos
+    // ---------------------------------------------------------
     const handleArquivo = (file) => {
-        if (file) {
-            setArquivo(file);
-            setPreview(URL.createObjectURL(file));
-            setErro("");
-            setResultadoAPI(null);
-            if (!modoComparacao) setEtapa("preview");
-        }
-    };
-
-
-    const handleInputChange = (e) => {
-        const file = e.target.files[0];
-        handleArquivo(file);
-    };
-
-
-    // Arrastar e soltar no modo de comparação:
-    // preenche o primeiro slot vazio (doc 1, depois doc 2)
-    const handleDropComparacao = (file) => {
         if (!file) return;
+        setArquivo(file);
+        setPreview(URL.createObjectURL(file));
+        setErro("");
+        setResultadoAPI(null);
+        setEtapa("preview");
+    };
 
+    const limparComparacao = () => {
         setErro("");
         setResultadoComparacao(null);
         setDetalheComparacao(false);
+    };
 
-        if (!arquivo) {
-            setArquivo(file);
-        } else if (!documento2) {
-            setDocumento2(file);
+    const selecionarDocumento = (definir) => (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        definir(file);
+        limparComparacao();
+    };
+
+    // Arrastar e soltar na comparação: preenche o documento 1 e, depois, o 2
+    const handleDropComparacao = (file) => {
+        if (!file) return;
+        limparComparacao();
+        if (!arquivo) setArquivo(file);
+        else setDocumento2(file);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setDragAtivo(false);
+        if (carregando) return;
+
+        const file = e.dataTransfer.files[0];
+        if (modoComparacao) handleDropComparacao(file);
+        else handleArquivo(file);
+    };
+
+    const trocarModo = (comparar) => {
+        setModoComparacao(comparar);
+        limparComparacao();
+
+        if (comparar) {
+            setResultadoAPI(null);
+            setEtapa("upload");
         } else {
-            setDocumento2(file);
+            setDocumento2(null);
         }
     };
 
+    const novaAnalise = () => {
+        setArquivo(null);
+        setPreview(null);
+        setResultadoAPI(null);
+        setMostrarTodosTrechos(false);
+        setErro("");
+        setEtapa("upload");
+    };
 
+
+    // ---------------------------------------------------------
+    // Chamadas à API
+    // ---------------------------------------------------------
     const compararDocumentos = async () => {
         if (!arquivo || !documento2) {
             setErro("Selecione os dois documentos para comparar.");
@@ -126,9 +639,7 @@ function Analise() {
         }
 
         setCarregando(true);
-        setErro("");
-        setResultadoComparacao(null);
-        setDetalheComparacao(false);
+        limparComparacao();
 
         const dados = new FormData();
         dados.append("documento1", arquivo);
@@ -139,90 +650,50 @@ function Analise() {
                 method: "POST",
                 body: dados
             });
-
             const json = await resposta.json();
 
             if (!resposta.ok) {
-                throw new Error(
-                    json.erro || "Erro ao comparar documentos."
-                );
+                throw new Error(json.erro || "Erro ao comparar documentos.");
             }
 
             setResultadoComparacao(json.comparacao);
-            setDetalheComparacao(false);
         } catch (err) {
-            setErro(
-                mensagemDeErro(err, "Não foi possível conectar ao comparador.")
-            );
+            setErro(mensagemDeErro(err, "Não foi possível conectar ao comparador."));
         } finally {
             setCarregando(false);
         }
     };
 
-
-    // Função de Análise com chamada Real à API Python
     const analisarDocumento = async () => {
         if (!arquivo) {
             setErro("Selecione um documento antes de iniciar.");
             return;
         }
 
-
         setCarregando(true);
         setErro("");
-
 
         const dados = new FormData();
         dados.append("imagem", arquivo);
 
-
         try {
             const resposta = await fetchComTimeout(`${API_URL}/analisar`, {
                 method: "POST",
-                body: dados,
+                body: dados
             });
-
-
             const dadosRetornados = await resposta.json();
 
-
             if (!resposta.ok) {
-                throw new Error(dadosRetornados.erro || "Erro durante a análise do documento.");
+                throw new Error(
+                    dadosRetornados.erro || "Erro durante a análise do documento."
+                );
             }
 
-
-            // Salva a análise no histórico do usuário logado.
-            const token = localStorage.getItem("token");
-
-            if (token) {
-                try {
-                    const salvo = await fetchComTimeout(
-                        `${BACKEND_API_URL}/analises/`,
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                Authorization: `Bearer ${token}`
-                            },
-                            body: JSON.stringify({
-                                nome_arquivo: arquivo.name,
-                                tamanho_bytes: arquivo.size,
-                                resultado: dadosRetornados
-                            })
-                        },
-                        30000
-                    );
-
-                    if (!salvo.ok) {
-                        console.warn("Histórico não salvo:", await salvo.text());
-                    }
-                } catch (falhaHistorico) {
-                    console.warn("API de histórico indisponível:", falhaHistorico);
-                }
-            }
+            await salvarNoHistorico(arquivo, dadosRetornados);
 
             setResultadoAPI(dadosRetornados);
             setVersaoImagem(Date.now());
+            setMostrarTodosTrechos(false);
             setEtapa("resultado");
         } catch (err) {
             setErro(mensagemDeErro(err, "Não foi possível conectar ao servidor."));
@@ -231,12 +702,7 @@ function Analise() {
         }
     };
 
-    // =========================================================
-    // GERAR E BAIXAR RELATÓRIO PDF
-    // =========================================================
-
     const baixarPDF = async () => {
-
         if (!resultadoAPI) {
             setErro("Nenhum resultado de análise disponível.");
             return;
@@ -246,118 +712,105 @@ function Analise() {
         setErro("");
 
         try {
-
-            const dadosPDF = {
-                ...resultadoAPI,
-                nome_arquivo: arquivo?.name || "documento_analisado"
-            };
-
             const resposta = await fetchComTimeout(`${API_URL}/gerar_pdf`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(dadosPDF)
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    ...resultadoAPI,
+                    nome_arquivo: arquivo?.name || "documento_analisado"
+                })
             });
 
             if (!resposta.ok) {
-
                 let mensagem = "Erro ao gerar o relatório PDF.";
-
                 try {
                     const erroAPI = await resposta.json();
                     mensagem = erroAPI.erro || mensagem;
                 } catch {
-                    // mantém mensagem padrão
+                    // mantém a mensagem padrão
                 }
-
                 throw new Error(mensagem);
             }
 
-            // Recebe o PDF como arquivo
             const blob = await resposta.blob();
-
-            // Cria um endereço temporário para o PDF
             const url = window.URL.createObjectURL(blob);
 
-            // Cria um link temporário para download
             const link = document.createElement("a");
-
             link.href = url;
             link.download = `VALID_Relatorio_${arquivo?.name?.replace(/\.[^/.]+$/, "") || "documento"}.pdf`;
-
             document.body.appendChild(link);
-
             link.click();
 
-            // Limpa depois do download
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
-
         } catch (err) {
-
             console.error("Erro ao gerar PDF:", err);
-
-            setErro(
-                mensagemDeErro(err, "Não foi possível gerar o relatório PDF.")
-            );
-
+            setErro(mensagemDeErro(err, "Não foi possível gerar o relatório PDF."));
         } finally {
-
             setGerandoPDF(false);
         }
     };
 
 
-    // Auxiliares para extrair os dados da API com segurança
-    const obterClassificacao = () => resultadoAPI?.analise_global?.classification || "Não identificada";
-    const obterScoreFinal = () => resultadoAPI?.analise_global?.combined_score ?? 0;
-    const obterPixelScore = () => resultadoAPI?.analise_global?.pixel_score ?? 0;
-    const obterScoreGeometria = () => resultadoAPI?.analise_global?.geometry_score ?? 0;
-    const obterContinuidade = () => resultadoAPI?.analise_global?.continuity_score ?? "-";
-    const obterMaiorBloco = () => resultadoAPI?.analise_global?.max_block_score ?? "-";
-    const obterBlocosSuspeitos = () => resultadoAPI?.lista_anomalias?.length ?? 0;
-    const obterTotalRegioes = () => resultadoAPI?.total_regioes_texto ?? 0;
-    const obterRegioesSuspeitas = () => resultadoAPI?.analise_global?.suspicious_geometry_regions ?? 0;
+    // ---------------------------------------------------------
+    // Dados derivados do resultado
+    // ---------------------------------------------------------
+    const analise = resultadoAPI?.analise_global ?? {};
+    const classificacao = analise.classification || "Não identificada";
+    const veredito = VEREDITOS[obterStatus(classificacao)];
+    const scoreFinal = Number(analise.combined_score) || 0;
+    const trechos = resultadoAPI?.lista_anomalias ?? [];
+    const trechosVisiveis = mostrarTodosTrechos
+        ? trechos
+        : trechos.slice(0, MAX_TRECHOS_VISIVEIS);
 
-
-    // Determina classe e status do resultado
-    // "autentico" só quando a classificação é explicitamente baixa.
-    // Média ou classificação não identificada => "atencao" (revisão manual).
-    const statusResultado = () => {
-        const classif = obterClassificacao().toLowerCase();
-        if (classif.includes("alta")) return "suspeito";
-        if (classif.includes("baixa")) return "autentico";
-        return "atencao";
-    };
-
-
-    const classeResultado = () => {
-        const status = statusResultado();
-        if (status === "suspeito") return "alta";
-        if (status === "autentico") return "baixa";
-        return "media";
-    };
-
-
-    const tituloResultado = () => {
-        const status = statusResultado();
-        if (status === "suspeito") return "Suspeito";
-        if (status === "autentico") return "Autêntico";
-        return "Requer atenção";
-    };
-
-
-    const textoResultado = () => {
-        const status = statusResultado();
-        if (status === "suspeito") {
-            return "Seu documento foi analisado e foram identificadas possíveis inconsistências na estrutura ou pixels.";
+    const metricas = [
+        {
+            rotulo: "Índice de suspeita final",
+            valor: formatar(scoreFinal, 2),
+            ajuda: "Junta a análise da imagem e a do texto."
+        },
+        {
+            rotulo: "Análise da imagem (pixels)",
+            valor: formatar(analise.pixel_score, 2),
+            ajuda: "Procura edições nos pixels do arquivo."
+        },
+        {
+            rotulo: "Análise do texto (EOCR)",
+            valor: formatar(analise.geometry_score, 2),
+            ajuda: "Avalia ângulo e densidade das regiões de texto."
+        },
+        {
+            rotulo: "Continuidade",
+            valor: formatar(analise.continuity_score, 2),
+            ajuda: "Mede variações bruscas de textura que podem indicar emendas."
+        },
+        {
+            rotulo: "Maior bloco suspeito",
+            valor: formatar(analise.max_block_score, 2),
+            ajuda: "Pontuação da área da imagem que mais se destacou."
+        },
+        {
+            rotulo: "Trechos em destaque",
+            valor: trechos.length,
+            ajuda: "Trechos de texto que merecem atenção."
+        },
+        {
+            rotulo: "Regiões de texto lidas",
+            valor: resultadoAPI?.total_regioes_texto ?? 0,
+            ajuda: "Quantas partes de texto o VALID encontrou."
+        },
+        {
+            rotulo: "Regiões de texto suspeitas",
+            valor: analise.suspicious_geometry_regions ?? 0,
+            ajuda: "Partes do texto com geometria fora do esperado."
         }
-        if (status === "autentico") {
-            return "Seu documento foi analisado com sucesso e não foram identificados sinais significativos de alteração.";
-        }
-        return "Seu documento foi analisado e apresentou sinais moderados de inconsistência, ou a classificação não pôde ser determinada. Recomenda-se revisão manual.";
-    };
+    ];
+
+    const infoComparacao = resultadoComparacao
+        ? STATUS_COMPARACAO[resultadoComparacao.status] ?? STATUS_COMPARACAO_PADRAO
+        : null;
+    const compatibilidade = Number(resultadoComparacao?.compatibilidade ?? 0);
 
 
     return (
@@ -368,683 +821,218 @@ function Analise() {
                 setDragAtivo(true);
             }}
             onDragLeave={() => setDragAtivo(false)}
-            onDrop={(e) => {
-                e.preventDefault();
-                setDragAtivo(false);
-                const file = e.dataTransfer.files[0];
-
-                if (modoComparacao) {
-                    handleDropComparacao(file);
-                } else {
-                    handleArquivo(file);
-                }
-            }}
+            onDrop={handleDrop}
         >
             <Header />
-
 
             <section className="secanalise">
                 <h1 className="titulos-analise">Análise de Documento</h1>
 
-
                 <div className="container row-analise">
-
 
                     {/* CARD PRINCIPAL */}
                     <div className="card-analise">
 
-
-                        {/* ETAPA 1: UPLOAD */}
+                        {/* ETAPA 1: UPLOAD / COMPARAÇÃO */}
                         {etapa === "upload" && (
-                            <div className="upload-area">
+                            <>
+                                {!carregando && !resultadoComparacao && (
+                                    <div className="modo-seletor" role="group" aria-label="Tipo de verificação">
+                                        <button
+                                            type="button"
+                                            className={`modo-opcao ${!modoComparacao ? "ativo" : ""}`}
+                                            aria-pressed={!modoComparacao}
+                                            onClick={() => trocarModo(false)}
+                                        >
+                                            Análise individual
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`modo-opcao ${modoComparacao ? "ativo" : ""}`}
+                                            aria-pressed={modoComparacao}
+                                            onClick={() => trocarModo(true)}
+                                        >
+                                            Comparar documentos
+                                        </button>
+                                    </div>
+                                )}
 
-                                <div
-                                    style={{
-                                        display: "flex",
-                                        gap: "10px",
-                                        justifyContent: "center",
-                                        marginBottom: "24px",
-                                        flexWrap: "wrap"
-                                    }}
-                                >
-                                    <button
-                                        type="button"
-                                        className="btn-acao"
-                                        onClick={() => {
-                                            setModoComparacao(false);
-                                            setDocumento2(null);
-                                            setResultadoComparacao(null);
-                                            setDetalheComparacao(false);
-                                            setErro("");
-                                        }}
-                                        style={{
-                                            opacity: modoComparacao ? 0.65 : 1
-                                        }}
-                                    >
-                                        Análise individual
-                                    </button>
+                                {/* Carregando a comparação */}
+                                {carregando && (
+                                    <ScannerLoading
+                                        eyebrow="COMPARAÇÃO EM ANDAMENTO"
+                                        titulo="Comparando os documentos"
+                                        texto="O VALID está lendo os dois arquivos e confrontando nome, CPF e data."
+                                        status="Verificando nome, CPF e data..."
+                                    />
+                                )}
 
-                                    <button
-                                        type="button"
-                                        className="btn-acao"
-                                        onClick={() => {
-                                            setModoComparacao(true);
-                                            setResultadoAPI(null);
-                                            setResultadoComparacao(null);
-                                            setDetalheComparacao(false);
-                                            setEtapa("upload");
-                                            setErro("");
-                                        }}
-                                        style={{
-                                            opacity: modoComparacao ? 1 : 0.65
-                                        }}
-                                    >
-                                        Comparar documentos
-                                    </button>
-                                </div>
-
-                                {!modoComparacao ? (
-                                    <>
+                                {/* Análise individual: envio do arquivo */}
+                                {!carregando && !modoComparacao && (
+                                    <div className="upload-area">
                                         <div className="icone-download"><LuDownload /></div>
                                         <h3>Arraste ou envie seu documento</h3>
 
                                         <div className="btn-upload">
-                                            <label style={{ cursor: "pointer" }}>
+                                            <label>
                                                 Selecione um arquivo
                                                 <input
                                                     type="file"
                                                     hidden
                                                     accept=".pdf,.jpg,.jpeg,.png"
-                                                    onChange={handleInputChange}
+                                                    onChange={(e) => handleArquivo(e.target.files[0])}
                                                 />
                                             </label>
                                         </div>
 
                                         <p>JPG, PNG ou PDF</p>
-                                    </>
-                                ) : (
-                                    <div className="comparacao-area">
-
-                                        {!carregando && !resultadoComparacao && (
-                                            <>
-                                                <div className="comparacao-documentos-grid">
-                                                    <div className={`comparacao-arquivo-card ${arquivo ? "selecionado" : ""}`}>
-                                                        <div className="comparacao-arquivo-icone">
-                                                            <FaFilePdf />
-                                                        </div>
-
-                                                        <span className="mini-label">DOCUMENTO 01</span>
-                                                        <h3>
-                                                            {arquivo
-                                                                ? arquivo.name
-                                                                : "Selecione o primeiro documento"}
-                                                        </h3>
-
-                                                        <p>
-                                                            Documento principal que será usado como referência na comparação.
-                                                        </p>
-
-                                                        <div className="btn-upload">
-                                                            <label style={{ cursor: "pointer" }}>
-                                                                {arquivo ? "Trocar documento" : "Selecionar documento"}
-                                                                <input
-                                                                    type="file"
-                                                                    hidden
-                                                                    accept=".pdf,.jpg,.jpeg,.png"
-                                                                    onChange={(e) => {
-                                                                        const file = e.target.files[0];
-
-                                                                        if (file) {
-                                                                            setArquivo(file);
-                                                                            setErro("");
-                                                                            setResultadoComparacao(null);
-                                                                            setDetalheComparacao(false);
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </label>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="comparacao-conector">
-                                                        <div className="comparacao-linha"></div>
-                                                        <span>VS</span>
-                                                        <div className="comparacao-linha"></div>
-                                                    </div>
-
-                                                    <div className={`comparacao-arquivo-card ${documento2 ? "selecionado" : ""}`}>
-                                                        <div className="comparacao-arquivo-icone">
-                                                            <FaFilePdf />
-                                                        </div>
-
-                                                        <span className="mini-label">DOCUMENTO 02</span>
-                                                        <h3>
-                                                            {documento2
-                                                                ? documento2.name
-                                                                : "Selecione o segundo documento"}
-                                                        </h3>
-
-                                                        <p>
-                                                            Documento que terá nome, CPF e data confrontados com o primeiro.
-                                                        </p>
-
-                                                        <div className="btn-upload">
-                                                            <label style={{ cursor: "pointer" }}>
-                                                                {documento2 ? "Trocar documento" : "Selecionar documento"}
-                                                                <input
-                                                                    type="file"
-                                                                    hidden
-                                                                    accept=".pdf,.jpg,.jpeg,.png"
-                                                                    onChange={(e) => {
-                                                                        const file = e.target.files[0];
-
-                                                                        if (file) {
-                                                                            setDocumento2(file);
-                                                                            setErro("");
-                                                                            setResultadoComparacao(null);
-                                                                            setDetalheComparacao(false);
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {erro && (
-                                                    <p className="erro-comparacao">
-                                                        {erro}
-                                                    </p>
-                                                )}
-
-                                                <button
-                                                    className="btn-acao"
-                                                    onClick={compararDocumentos}
-                                                    disabled={!arquivo || !documento2}
-                                                >
-                                                    Comparar documentos
-                                                </button>
-                                            </>
-                                        )}
-
-                                        {carregando && (
-                                            <div className="scanner-loading comparacao-loading">
-                                                <div className="scanner-particles">
-                                                    <span></span>
-                                                    <span></span>
-                                                    <span></span>
-                                                    <span></span>
-                                                    <span></span>
-                                                    <span></span>
-                                                    <span></span>
-                                                    <span></span>
-                                                </div>
-
-                                                <div className="document-scanner">
-                                                    <div className="document-glow"></div>
-
-                                                    <div className="fake-document">
-                                                        <div className="doc-top">
-                                                            <div className="doc-symbol"></div>
-
-                                                            <div className="doc-title-lines">
-                                                                <span></span>
-                                                                <span></span>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="doc-line long"></div>
-                                                        <div className="doc-line medium"></div>
-                                                        <div className="doc-line short"></div>
-
-                                                        <div className="doc-block">
-                                                            <span></span>
-                                                            <span></span>
-                                                            <span></span>
-                                                        </div>
-
-                                                        <div className="doc-line long"></div>
-                                                        <div className="doc-line medium"></div>
-
-                                                        <div className="scanner-line">
-                                                            <div className="scanner-line-glow"></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="loading-text">
-                                                    <div className="loading-eyebrow">
-                                                        <span className="pulse-dot"></span>
-                                                        COMPARAÇÃO EM ANDAMENTO
-                                                    </div>
-
-                                                    <h2>
-                                                        Comparando os documentos
-                                                    </h2>
-
-                                                    <p>
-                                                        O VALID está extraindo e confrontando os campos dos dois arquivos para medir a compatibilidade.
-                                                    </p>
-
-                                                    <div className="loading-status">
-                                                        <span className="status-loader"></span>
-                                                        Verificando nome, CPF e data...
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {resultadoComparacao && !detalheComparacao && (
-                                            <div className="resultado-area comparacao-resultado-enter">
-                                                <div className="icone-resultado">
-                                                    {resultadoComparacao.status === "COMPATIVEL"
-                                                        ? <GoShieldCheck />
-                                                        : <GoShield />}
-                                                </div>
-
-                                                <h2>
-                                                    {resultadoComparacao.status === "COMPATIVEL"
-                                                        ? "Documentos compatíveis"
-                                                        : resultadoComparacao.status === "REQUER_REVISAO"
-                                                            ? "Compatibilidade com ressalvas"
-                                                            : resultadoComparacao.status === "SEM DADOS SUFICIENTES"
-                                                                ? "Dados insuficientes"
-                                                                : "Documentos divergentes"}
-                                                </h2>
-
-                                                <p>
-                                                    {resultadoComparacao.status === "COMPATIVEL"
-                                                        ? "Os campos comparáveis encontrados nos dois documentos apresentam correspondência."
-                                                        : resultadoComparacao.status === "REQUER_REVISAO"
-                                                            ? "Os valores podem coincidir, mas há dados que exigem revisão de validade antes da conclusão."
-                                                            : resultadoComparacao.status === "SEM DADOS SUFICIENTES"
-                                                                ? "Não foram encontrados campos suficientes para concluir a comparação com segurança."
-                                                                : "Foram identificadas divergências entre os campos extraídos dos documentos."}
-                                                </p>
-
-                                                <p>
-                                                    <strong>
-                                                        Compatibilidade Final:{" "}
-                                                        {Number(resultadoComparacao.compatibilidade ?? 0).toFixed(1)}%
-                                                    </strong>
-                                                </p>
-
-                                                <button
-                                                    className="btn-acao"
-                                                    onClick={() => setDetalheComparacao(true)}
-                                                >
-                                                    Ver relatório completo
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {resultadoComparacao && detalheComparacao && (
-                                            <div className="relatorio-area comparacao-resultado-enter">
-                                                <div className="section-title">
-                                                    <span>DETALHAMENTO TÉCNICO</span>
-                                                    <h2>Relatório de Comparação</h2>
-                                                </div>
-
-                                                <div
-                                                    className="resultado-principal"
-                                                    style={{ marginTop: "20px" }}
-                                                >
-                                                    <div
-                                                        className={`score-card ${
-                                                            resultadoComparacao.status === "COMPATIVEL"
-                                                                ? "baixa"
-                                                                : resultadoComparacao.status === "REQUER_REVISAO"
-                                                                    ? "media"
-                                                                    : "alta"
-                                                        }`}
-                                                    >
-                                                        <div className="score-label">
-                                                            COMPATIBILIDADE
-                                                        </div>
-
-                                                        <div className="score">
-                                                            {Number(
-                                                                resultadoComparacao.compatibilidade ?? 0
-                                                            ).toFixed(1)}
-                                                            <small>%</small>
-                                                        </div>
-
-                                                        <div className="classificacao">
-                                                            {resultadoComparacao.status === "COMPATIVEL"
-                                                                ? "Compatível"
-                                                                : resultadoComparacao.status === "REQUER_REVISAO"
-                                                                    ? "Requer revisão"
-                                                                    : resultadoComparacao.status === "SEM DADOS SUFICIENTES"
-                                                                        ? "Dados insuficientes"
-                                                                        : "Inconsistente"}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="explicacao">
-                                                        <span className="mini-label">
-                                                            RESULTADO DA COMPARAÇÃO
-                                                        </span>
-
-                                                        <h3>
-                                                            Resumo da análise
-                                                        </h3>
-
-                                                        <p>
-                                                            O VALID comparou os campos estruturados encontrados nos dois documentos.
-                                                            O percentual representa a compatibilidade entre os dados disponíveis e deve
-                                                            ser utilizado como apoio à triagem documental.
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <div
-                                                    className="section-title"
-                                                    style={{ marginTop: "30px" }}
-                                                >
-                                                    <span>DOCUMENTOS</span>
-                                                    <h2>Arquivos comparados</h2>
-                                                </div>
-
-                                                <div className="comparacao-resumo-arquivos">
-                                                    <div className="metrica">
-                                                        <span>Documento 01</span>
-                                                        <strong>{arquivo?.name || "-"}</strong>
-                                                    </div>
-
-                                                    <div className="metrica">
-                                                        <span>Documento 02</span>
-                                                        <strong>{documento2?.name || "-"}</strong>
-                                                    </div>
-                                                </div>
-
-                                                <div
-                                                    className="section-title"
-                                                    style={{ marginTop: "30px" }}
-                                                >
-                                                    <span>COMPARAÇÃO DE CAMPOS</span>
-                                                    <h2>Resultados encontrados</h2>
-                                                </div>
-
-                                                <div className="analises-grid">
-                                                    {[
-                                                        {
-                                                            chave: "nome",
-                                                            titulo: "NOME",
-                                                            icone: "N",
-                                                            descricao: "Correspondência entre os nomes identificados."
-                                                        },
-                                                        {
-                                                            chave: "cpf",
-                                                            titulo: "CPF",
-                                                            icone: "C",
-                                                            descricao: "Correspondência entre os CPFs identificados."
-                                                        },
-                                                        {
-                                                            chave: "data",
-                                                            titulo: "DATA",
-                                                            icone: "D",
-                                                            descricao: "Correspondência entre as datas identificadas."
-                                                        }
-                                                    ].map((campo) => {
-                                                        const statusCampo =
-                                                            resultadoComparacao.campos?.[campo.chave];
-
-                                                        const compativel =
-                                                            statusCampo === "COMPATIVEL";
-
-                                                        const naoComparavel =
-                                                            !statusCampo ||
-                                                            statusCampo === "NAO_IDENTIFICADO" ||
-                                                            statusCampo === "NAO_COMPARAVEL";
-
-                                                        const percentual =
-                                                            campo.chave === "nome"
-                                                                ? Math.min(
-                                                                    Number(
-                                                                        resultadoComparacao.detalhes
-                                                                            ?.nome_similaridade ?? 0
-                                                                    ) * 100,
-                                                                    100
-                                                                )
-                                                                : compativel
-                                                                    ? 100
-                                                                    : 0;
-
-                                                        const valores =
-                                                            resultadoComparacao.detalhes
-                                                                ?.valores?.[campo.chave];
-
-                                                        const formatarValor = (valor) => {
-                                                            if (Array.isArray(valor)) {
-                                                                return valor.length
-                                                                    ? valor.join(", ")
-                                                                    : "Não identificado";
-                                                            }
-
-                                                            if (
-                                                                valor === null ||
-                                                                valor === undefined ||
-                                                                valor === ""
-                                                            ) {
-                                                                return "Não identificado";
-                                                            }
-
-                                                            return String(valor);
-                                                        };
-
-                                                        return (
-                                                            <div
-                                                                className={`analise-card comparacao-campo-card ${
-                                                                    compativel
-                                                                        ? "campo-compativel"
-                                                                        : naoComparavel
-                                                                            ? "campo-neutro"
-                                                                            : "campo-divergente"
-                                                                }`}
-                                                                key={campo.chave}
-                                                            >
-                                                                <div className="card-top">
-                                                                    <div className="card-icon">
-                                                                        {campo.icone}
-                                                                    </div>
-
-                                                                    <span>{campo.titulo}</span>
-                                                                </div>
-
-                                                                <h3>
-                                                                    {naoComparavel
-                                                                        ? "Não identificado"
-                                                                        : compativel
-                                                                            ? "Compatível"
-                                                                            : statusCampo === "PARCIALMENTE_COMPATIVEL"
-                                                                                ? "Parcialmente compatível"
-                                                                                : statusCampo === "INVALIDO"
-                                                                                    ? "Inválido"
-                                                                                    : statusCampo === "AMBIGUO"
-                                                                                        ? "Ambíguo"
-                                                                                        : "Divergente"}
-                                                                </h3>
-
-                                                                <div className="barra">
-                                                                    <div
-                                                                        style={{
-                                                                            width: `${percentual}%`
-                                                                        }}
-                                                                    ></div>
-                                                                </div>
-
-                                                                <p>
-                                                                    {campo.descricao}
-                                                                </p>
-
-                                                                {valores && (
-                                                                    <div className="comparacao-valores">
-                                                                        <div className="comparacao-valor-linha">
-                                                                            <span>Documento 1</span>
-                                                                            <strong>
-                                                                                {formatarValor(valores.documento1)}
-                                                                            </strong>
-                                                                        </div>
-
-                                                                        <div className="comparacao-valor-linha">
-                                                                            <span>Documento 2</span>
-                                                                            <strong>
-                                                                                {formatarValor(valores.documento2)}
-                                                                            </strong>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-
-                                                                {campo.chave === "cpf" && (
-                                                                    <div className="comparacao-validacao-cpf">
-                                                                        {(() => {
-                                                                            const validacao =
-                                                                                resultadoComparacao.detalhes
-                                                                                    ?.cpf_validacao;
-
-                                                                            const traduzir = (status) => {
-                                                                                if (status === "valid") return "Válido";
-                                                                                if (status === "corrected") return "Corrigido pelo OCR";
-                                                                                if (status === "invalid") return "Inválido";
-                                                                                if (status === "ambiguous") return "Ambíguo";
-                                                                                if (status === "not_found") return "Não identificado";
-                                                                                return status || "Não informado";
-                                                                            };
-
-                                                                            const existeRessalva =
-                                                                                ["invalid", "ambiguous"].includes(validacao?.documento1) ||
-                                                                                ["invalid", "ambiguous"].includes(validacao?.documento2);
-
-                                                                            return (
-                                                                                <>
-                                                                                    <div className="comparacao-validacao-linha">
-                                                                                        <span>Validação doc. 1</span>
-                                                                                        <strong>{traduzir(validacao?.documento1)}</strong>
-                                                                                    </div>
-
-                                                                                    <div className="comparacao-validacao-linha">
-                                                                                        <span>Validação doc. 2</span>
-                                                                                        <strong>{traduzir(validacao?.documento2)}</strong>
-                                                                                    </div>
-
-                                                                                    {existeRessalva && (
-                                                                                        <p className="comparacao-alerta-validacao">
-                                                                                            Os valores podem ser iguais, mas a validade matemática do CPF requer revisão.
-                                                                                        </p>
-                                                                                    )}
-                                                                                </>
-                                                                            );
-                                                                        })()}
-                                                                    </div>
-                                                                )}
-
-                                                                {campo.chave === "nome" && (
-                                                                    <p className="comparacao-similaridade">
-                                                                        Similaridade nominal:{" "}
-                                                                        <strong>
-                                                                            {percentual.toFixed(1)}%
-                                                                        </strong>
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-
-                                                <div
-                                                    className="section-title metric-title"
-                                                    style={{ marginTop: "30px" }}
-                                                >
-                                                    <span>DETALHAMENTO</span>
-                                                    <h2>Métricas da comparação</h2>
-                                                </div>
-
-                                                <div className="metricas">
-                                                    <div className="metrica">
-                                                        <span>Compatibilidade geral</span>
-                                                        <strong>
-                                                            {Number(
-                                                                resultadoComparacao.compatibilidade ?? 0
-                                                            ).toFixed(2)}%
-                                                        </strong>
-                                                    </div>
-
-                                                    <div className="metrica">
-                                                        <span>Campos comparáveis</span>
-                                                        <strong>
-                                                            {resultadoComparacao.detalhes
-                                                                ?.campos_comparaveis ?? 0}
-                                                        </strong>
-                                                    </div>
-
-                                                    <div className="metrica">
-                                                        <span>Similaridade do nome</span>
-                                                        <strong>
-                                                            {(
-                                                                Number(
-                                                                    resultadoComparacao.detalhes
-                                                                        ?.nome_similaridade ?? 0
-                                                                ) * 100
-                                                            ).toFixed(2)}%
-                                                        </strong>
-                                                    </div>
-
-                                                    <div className="metrica">
-                                                        <span>Status final</span>
-                                                        <strong>
-                                                            {resultadoComparacao.status === "COMPATIVEL"
-                                                                ? "Compatível"
-                                                                : resultadoComparacao.status === "REQUER_REVISAO"
-                                                                    ? "Requer revisão"
-                                                                    : resultadoComparacao.status === "SEM DADOS SUFICIENTES"
-                                                                        ? "Dados insuficientes"
-                                                                        : "Inconsistente"}
-                                                        </strong>
-                                                    </div>
-                                                </div>
-
-                                                <div className="acoes-relatorio comparacao-acoes">
-                                                    <button
-                                                        className="btn-acao btn-fechar-rel"
-                                                        onClick={() => setDetalheComparacao(false)}
-                                                    >
-                                                        Voltar para o Resultado
-                                                    </button>
-
-                                                    <button
-                                                        className="btn-acao"
-                                                        onClick={() => {
-                                                            setArquivo(null);
-                                                            setDocumento2(null);
-                                                            setResultadoComparacao(null);
-                                                            setDetalheComparacao(false);
-                                                            setErro("");
-                                                        }}
-                                                    >
-                                                        Comparar outros documentos
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 )}
-                            </div>
+
+                                {/* Comparação: escolha dos dois documentos */}
+                                {!carregando && modoComparacao && !resultadoComparacao && (
+                                    <div className="upload-area comparacao-area">
+                                        <div className="comparacao-documentos-grid">
+                                            <CartaoDocumento
+                                                rotulo="Documento 1"
+                                                arquivo={arquivo}
+                                                vazio="Selecione o primeiro documento"
+                                                descricao="Documento principal, usado como referência na comparação."
+                                                aoSelecionar={selecionarDocumento(setArquivo)}
+                                            />
+
+                                            <div className="comparacao-conector">
+                                                <div className="comparacao-linha"></div>
+                                                <span>VS</span>
+                                                <div className="comparacao-linha"></div>
+                                            </div>
+
+                                            <CartaoDocumento
+                                                rotulo="Documento 2"
+                                                arquivo={documento2}
+                                                vazio="Selecione o segundo documento"
+                                                descricao="Documento que terá nome, CPF e data confrontados com o primeiro."
+                                                aoSelecionar={selecionarDocumento(setDocumento2)}
+                                            />
+                                        </div>
+
+                                        {erro && <p className="msg-erro">{erro}</p>}
+
+                                        <button
+                                            className="btn-acao"
+                                            onClick={compararDocumentos}
+                                            disabled={!arquivo || !documento2}
+                                        >
+                                            Comparar documentos
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Comparação: resultado resumido */}
+                                {!carregando && resultadoComparacao && !detalheComparacao && (
+                                    <div className="resultado-area comparacao-resultado-enter">
+                                        <Veredito
+                                            nivel={infoComparacao.nivel}
+                                            Icone={infoComparacao.Icone}
+                                            rotulo="Resultado da comparação"
+                                            titulo={infoComparacao.titulo}
+                                            resumo={infoComparacao.resumo}
+                                        />
+
+                                        <div className="indice" data-nivel={infoComparacao.nivel}>
+                                            <strong>{compatibilidade.toFixed(1)}%</strong>
+                                            <span>de compatibilidade entre os campos comparados</span>
+                                        </div>
+
+                                        <AvisoFerramenta />
+
+                                        <div className="acoes-relatorio">
+                                            <button
+                                                className="btn-acao"
+                                                onClick={() => setDetalheComparacao(true)}
+                                            >
+                                                Ver detalhes da comparação
+                                            </button>
+                                            <button
+                                                className="btn-acao btn-secundario"
+                                                onClick={() => {
+                                                    setArquivo(null);
+                                                    setDocumento2(null);
+                                                    limparComparacao();
+                                                }}
+                                            >
+                                                Comparar outros documentos
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Comparação: detalhes */}
+                                {!carregando && resultadoComparacao && detalheComparacao && (
+                                    <div className="relatorio-area comparacao-resultado-enter">
+                                        <div>
+                                            <h2 className="titulo-secao">Detalhes da comparação</h2>
+                                            <p className="bloco-sub">
+                                                O VALID comparou nome, CPF e data encontrados nos dois documentos
+                                                ({resultadoComparacao.detalhes?.campos_comparaveis ?? 0} de{" "}
+                                                {CAMPOS_COMPARACAO.length} campos puderam ser comparados).
+                                                O percentual mostra o quanto os dados coincidem e deve ser
+                                                usado como apoio à triagem.
+                                            </p>
+                                        </div>
+
+                                        <div className="comparacao-resumo-arquivos">
+                                            <div className="metrica">
+                                                <span>Documento 1</span>
+                                                <strong>{arquivo?.name || "-"}</strong>
+                                            </div>
+                                            <div className="metrica">
+                                                <span>Documento 2</span>
+                                                <strong>{documento2?.name || "-"}</strong>
+                                            </div>
+                                        </div>
+
+                                        <div className="analises-grid">
+                                            {CAMPOS_COMPARACAO.map((campo) => (
+                                                <CampoComparacao
+                                                    key={campo.chave}
+                                                    campo={campo}
+                                                    resultado={resultadoComparacao}
+                                                />
+                                            ))}
+                                        </div>
+
+                                        <AvisoFerramenta />
+
+                                        <div className="acoes-relatorio">
+                                            <button
+                                                className="btn-acao btn-secundario"
+                                                onClick={() => setDetalheComparacao(false)}
+                                            >
+                                                Voltar para o resultado
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
 
 
-                        {/* ETAPA 2: PREVIEW & ENVIAR */}
+                        {/* ETAPA 2: PREVIEW E ENVIO */}
                         {etapa === "preview" && (
                             <div className={`preview-area ${carregando ? "modo-carregando" : ""}`}>
-
-                                {!carregando ? (
+                                {carregando ? (
+                                    <ScannerLoading
+                                        eyebrow="ANÁLISE EM ANDAMENTO"
+                                        titulo="Analisando seu documento"
+                                        texto="O VALID está procurando sinais de edição na imagem e no texto do documento."
+                                        status="Aguarde, isso pode levar alguns instantes..."
+                                    />
+                                ) : (
                                     <>
                                         <div className="preview-area-img">
                                             {arquivo?.type?.includes("image") ? (
-                                                <img
-                                                    src={preview}
-                                                    alt="Documento"
-                                                    className="preview-img"
-                                                />
+                                                <img src={preview} alt="Documento" className="preview-img" />
                                             ) : arquivo?.type === "application/pdf" ? (
                                                 <div className="pdf-preview">
                                                     <FaFilePdf size={80} color="#00A279" />
@@ -1055,398 +1043,221 @@ function Analise() {
                                             )}
                                         </div>
 
-                                        {erro && (
-                                            <p
-                                                style={{
-                                                    color: "#d9534f",
-                                                    marginTop: "15px",
-                                                    fontWeight: "bold"
-                                                }}
+                                        {erro && <p className="msg-erro">{erro}</p>}
+
+                                        <div className="acoes-relatorio">
+                                            <button className="btn-acao" onClick={analisarDocumento}>
+                                                Analisar documento
+                                            </button>
+                                            <button
+                                                className="btn-acao btn-secundario"
+                                                onClick={novaAnalise}
                                             >
-                                                {erro}
-                                            </p>
-                                        )}
-
-                                        <button
-                                            className="btn-acao"
-                                            onClick={analisarDocumento}
-                                            disabled={carregando}
-                                        >
-                                            Analisar documento
-                                        </button>
+                                                Escolher outro arquivo
+                                            </button>
+                                        </div>
                                     </>
-                                ) : (
-                                    <div className="scanner-loading">
-
-                                        {/* DOCUMENTO */}
-                                        <div className="document-scanner">
-
-                                            <div className="document-glow"></div>
-
-                                            <div className="fake-document">
-
-                                                <div className="doc-top">
-                                                    <div className="doc-symbol"></div>
-
-                                                    <div className="doc-title-lines">
-                                                        <span></span>
-                                                        <span></span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="doc-line long"></div>
-                                                <div className="doc-line medium"></div>
-                                                <div className="doc-line short"></div>
-
-                                                <div className="doc-block">
-                                                    <span></span>
-                                                    <span></span>
-                                                    <span></span>
-                                                </div>
-
-                                                <div className="doc-line long"></div>
-                                                <div className="doc-line medium"></div>
-
-                                                {/* LINHA DO SCANNER */}
-                                                <div className="scanner-line">
-                                                    <div className="scanner-line-glow"></div>
-                                                </div>
-
-                                            </div>
-                                        </div>
-
-                                        {/* TEXTO */}
-                                        <div className="loading-text">
-
-                                            <h2>
-                                                Analisando seu documento
-                                            </h2>
-
-                                            <p>
-                                                O sistema está examinando pixels,
-                                                regiões textuais e padrões estruturais.
-                                            </p>
-
-                                            <div className="loading-status">
-                                                <span className="status-loader"></span>
-                                                <span className="loading-message">
-                                                    Processando informações...
-                                                </span>
-                                            </div>
-
-                                        </div>
-
-                                    </div>
                                 )}
                             </div>
                         )}
 
 
-                        {/* ETAPA 3: RESULTADO SINTÉTICO */}
+                        {/* ETAPA 3: RESULTADO EM LINGUAGEM SIMPLES */}
                         {etapa === "resultado" && (
                             <div className="resultado-area">
-                                <div className="icone-resultado">
-                                    {statusResultado() === "autentico" ? <GoShieldCheck /> : <GoShield />}
+                                <Veredito
+                                    nivel={veredito.nivel}
+                                    Icone={veredito.Icone}
+                                    rotulo={arquivo?.name ? `Arquivo analisado: ${arquivo.name}` : "Resultado da análise"}
+                                    titulo={veredito.titulo}
+                                    resumo={veredito.resumo}
+                                />
+
+                                <section className="bloco">
+                                    <h3 className="bloco-titulo">Índice de suspeita</h3>
+                                    <p className="bloco-sub">
+                                        {formatar(scoreFinal, 0)} de 100. Quanto maior o índice, mais
+                                        sinais de edição o VALID encontrou.
+                                    </p>
+                                    <MedidorSuspeita score={scoreFinal} nivel={veredito.nivel} />
+                                </section>
+
+                                <section className="bloco bloco-destaque" data-nivel={veredito.nivel}>
+                                    <h3 className="bloco-titulo">O que fazer agora</h3>
+                                    <ul className="passos">
+                                        {veredito.passos.map((passo) => (
+                                            <li key={passo}>{passo}</li>
+                                        ))}
+                                    </ul>
+                                </section>
+
+                                <section className="bloco">
+                                    <h3 className="bloco-titulo">O que o VALID verificou</h3>
+                                    <div className="verificacoes">
+                                        {VERIFICACOES.map((v) => (
+                                            <Verificacao
+                                                key={v.chave}
+                                                titulo={v.titulo}
+                                                descricao={v.descricao}
+                                                score={analise[v.chave]}
+                                            />
+                                        ))}
+                                    </div>
+                                </section>
+
+                                {trechos.length > 0 && (
+                                    <section className="bloco">
+                                        <h3 className="bloco-titulo">Trechos que merecem atenção</h3>
+                                        <p className="bloco-sub">
+                                            Estes trechos do texto foram os que mais se destacaram.
+                                            Confira-os no documento original.
+                                        </p>
+
+                                        <ul className="regioes-list">
+                                            {trechosVisiveis.map((trecho, i) => {
+                                                const nivel = nivelDoTexto(trecho.nivel_classificacao);
+                                                return (
+                                                    <li className="regiao" data-nivel={nivel} key={i}>
+                                                        <strong>
+                                                            {trecho.texto_identificado || `Trecho ${i + 1}`}
+                                                        </strong>
+                                                        <span className="chip">
+                                                            Suspeita {ROTULO_SUSPEITA[nivel].toLowerCase()}
+                                                        </span>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+
+                                        {trechos.length > MAX_TRECHOS_VISIVEIS && (
+                                            <button
+                                                type="button"
+                                                className="btn-link"
+                                                onClick={() => setMostrarTodosTrechos((v) => !v)}
+                                            >
+                                                {mostrarTodosTrechos
+                                                    ? "Mostrar menos"
+                                                    : `Mostrar todos (${trechos.length})`}
+                                            </button>
+                                        )}
+                                    </section>
+                                )}
+
+                                <AvisoFerramenta />
+
+                                {erro && <p className="msg-erro">{erro}</p>}
+
+                                <div className="acoes-relatorio">
+                                    <button className="btn-acao" onClick={baixarPDF} disabled={gerandoPDF}>
+                                        <FaFilePdf className="icone-botao" />
+                                        {gerandoPDF ? "Gerando PDF..." : "Baixar relatório PDF"}
+                                    </button>
+                                    <button
+                                        className="btn-acao btn-secundario"
+                                        onClick={() => {
+                                            setErro("");
+                                            setEtapa("relatorio");
+                                        }}
+                                    >
+                                        Ver detalhes técnicos
+                                    </button>
+                                    <button className="btn-acao btn-secundario" onClick={novaAnalise}>
+                                        Analisar outro documento
+                                    </button>
                                 </div>
-
-
-                                <h2>
-                                    {tituloResultado()}
-                                </h2>
-
-
-                                <p>
-                                    {textoResultado()}
-                                </p>
-
-
-                                <p>
-                                    <strong>
-                                        Classificação Final: {obterClassificacao()} ({Number(obterScoreFinal()).toFixed(1)}%)
-                                    </strong>
-                                </p>
-
-
-                                <button
-                                    className="btn-acao"
-                                    onClick={() => {
-                                        setErro("");
-                                        setEtapa("relatorio");
-                                    }}
-                                >
-                                    Ver relatório completo
-                                </button>
                             </div>
                         )}
 
 
-                        {/* ETAPA 4: RELATÓRIO DETALHADO COMPLETO */}
+                        {/* ETAPA 4: DETALHES TÉCNICOS */}
                         {etapa === "relatorio" && (
                             <div className="relatorio-area">
-                                <div className="section-title">
-                                    <span>DETALHAMENTO TÉCNICO</span>
-                                    <h2>Relatório de Análise</h2>
+                                <div>
+                                    <h2 className="titulo-secao">Detalhes técnicos</h2>
+                                    <p className="bloco-sub">
+                                        Para quem quer conferir como o resultado foi calculado: números e
+                                        imagens da análise.
+                                    </p>
                                 </div>
 
-
-                                {/* SCORE PRINCIPAL & EXPLICAÇÃO */}
-                                <div className="resultado-principal" style={{ marginTop: "20px" }}>
-                                    <div className={`score-card ${classeResultado()}`}>
-                                        <div className="score-label">SCORE FINAL</div>
+                                <div className="resultado-principal" data-nivel={veredito.nivel}>
+                                    <div className="score-card">
+                                        <div className="score-label">ÍNDICE FINAL</div>
                                         <div className="score">
-                                            {Number(obterScoreFinal()).toFixed(1)}
+                                            {formatar(scoreFinal, 1)}
                                             <small>%</small>
                                         </div>
-                                        <div className="classificacao">{obterClassificacao()}</div>
+                                        <div className="classificacao">Suspeita {classificacao.toLowerCase()}</div>
                                     </div>
 
-
                                     <div className="explicacao">
-                                        <span className="mini-label">RESULTADO DA FUSÃO</span>
-                                        <h3>Resumo da Análise</h3>
+                                        <h3>Como o resultado é calculado</h3>
                                         <p>
-                                            O resultado final combina as análises de pixels e EOCR. A análise de pixels
-                                            representa 50% do resultado e a análise geométrica textual representa 50%.
+                                            O índice final junta duas análises com o mesmo peso: a da imagem
+                                            (pixels), com 50%, e a do texto (EOCR), com os outros 50%.
                                         </p>
                                     </div>
                                 </div>
 
+                                <section className="bloco">
+                                    <h3 className="bloco-titulo">Imagens da análise</h3>
+                                    <p className="bloco-sub">
+                                        Cada imagem mostra, de um jeito diferente, onde o VALID procurou
+                                        sinais de edição.
+                                    </p>
 
-                                {/* GALERIA DE IMAGENS DAS ANÁLISES */}
-                                <div className="section-title" style={{ marginTop: "30px" }}>
-                                    <span>VISUALIZAÇÃO</span>
-                                    <h2>Imagens das análises</h2>
-                                </div>
-
-
-                                <div className="imagens-analise">
-                                    <div className="imagem-analise-card">
-                                        <div className="imagem-analise-header">
-                                            <span>PIXEL</span>
-                                            <h3>Mapa de blocos suspeitos</h3>
-                                        </div>
-                                        <div className="imagem-container">
-                                            <img
-                                                src={`${API_URL}/results/block_heatmap.png?v=${versaoImagem}`}
-                                                alt="Heatmap da análise de pixels"
-                                            />
-                                        </div>
-                                        <p>Visualização dos blocos identificados pela análise de pixels.</p>
-                                    </div>
-
-
-                                    <div className="imagem-analise-card">
-                                        <div className="imagem-analise-header">
-                                            <span>EOCR</span>
-                                            <h3>Análise híbrida</h3>
-                                        </div>
-                                        <div className="imagem-container">
-                                            <img
-                                                src={`${API_URL}/results/hybrid_analysis.png?v=${versaoImagem}`}
-                                                alt="Resultado visual da análise EOCR"
-                                            />
-                                        </div>
-                                        <p>Visualização das regiões textuais analisadas pelo EOCR.</p>
-                                    </div>
-
-
-                                    <div className="imagem-analise-card">
-                                        <div className="imagem-analise-header">
-                                            <span>CONTINUIDADE</span>
-                                            <h3>Mapa de continuidade</h3>
-                                        </div>
-                                        <div className="imagem-container">
-                                            <img
-                                                src={`${API_URL}/results/continuity_heatmap.png?v=${versaoImagem}`}
-                                                alt="Heatmap de continuidade dos pixels"
-                                            />
-                                        </div>
-                                        <p>Visualização das variações de continuidade encontradas no documento.</p>
-                                    </div>
-                                </div>
-
-                                {/* ÁREAS DE ATENÇÃO / LISTA DE ANOMALIAS */}
-                                {resultadoAPI?.lista_anomalias && resultadoAPI.lista_anomalias.length > 0 && (
-                                    <div className="regioes" style={{ marginTop: "30px" }}>
-                                        <div className="section-title">
-                                            <span>ATENÇÃO</span>
-                                            <h2>Áreas que merecem atenção</h2>
-                                        </div>
-
-                                        <div className="regioes-list">
-                                            {resultadoAPI.lista_anomalias.map((anomalia, index) => (
-                                                <div className="regiao" key={index}>
-                                                    <div className="regiao-number">
-                                                        {String(index + 1).padStart(2, "0")}
-                                                    </div>
-
-                                                    <div className="regiao-info">
-                                                        <strong>
-                                                            {anomalia.texto_identificado || `Região ${index + 1}`}
-                                                        </strong>
-
-                                                        <span>
-                                                            Nível: {anomalia.nivel_classificacao}
-                                                            {" | "}
-                                                            Pontuação Suspeita:{" "}
-                                                            {Number(anomalia.pontuacao_suspeita).toFixed(1)}
-                                                        </span>
-                                                    </div>
+                                    <div className="imagens-analise">
+                                        {IMAGENS.map((img) => (
+                                            <figure className="imagem-analise-card" key={img.arquivo}>
+                                                <figcaption className="imagem-analise-header">
+                                                    <h4>{img.titulo}</h4>
+                                                    <p>{img.legenda}</p>
+                                                </figcaption>
+                                                <div className="imagem-container">
+                                                    <img
+                                                        src={`${API_URL}/results/${img.arquivo}?v=${versaoImagem}`}
+                                                        alt={img.alt}
+                                                        loading="lazy"
+                                                    />
                                                 </div>
-                                            ))}
-                                        </div>
+                                            </figure>
+                                        ))}
                                     </div>
-                                )}
-                                {/* CARDS DE ANÁLISES COM BARRAS DE PROGRESSO */}
-                                <div className="analises-grid" style={{ marginTop: "30px" }}>
-                                    {/* CARD PIXEL */}
-                                    <div className="analise-card">
-                                        <div className="card-top">
-                                            <div className="card-icon">P</div>
-                                            <span>ANÁLISE DE PIXELS</span>
-                                        </div>
-                                        <h3>{Number(obterPixelScore()).toFixed(1)}%</h3>
-                                        <div className="barra">
-                                            <div style={{ width: `${Math.min(Number(obterPixelScore()), 100)}%` }}></div>
-                                        </div>
-                                        <p>Avaliação de alterações e inconsistências nos pixels do documento.</p>
-                                    </div>
+                                </section>
 
-
-                                    {/* CARD EOCR */}
-                                    <div className="analise-card">
-                                        <div className="card-top">
-                                            <div className="card-icon">E</div>
-                                            <span>ANÁLISE EOCR</span>
-                                        </div>
-                                        <h3>{Number(obterScoreGeometria()).toFixed(1)}%</h3>
-                                        <div className="barra">
-                                            <div style={{ width: `${Math.min(Number(obterScoreGeometria()), 100)}%` }}></div>
-                                        </div>
-                                        <p>Avaliação da geometria textual, incluindo ângulo e densidade das regiões.</p>
+                                <section className="bloco">
+                                    <h3 className="bloco-titulo">Números da análise</h3>
+                                    <div className="metricas">
+                                        {metricas.map((m) => (
+                                            <div className="metrica" key={m.rotulo}>
+                                                <span>{m.rotulo}</span>
+                                                <strong>{m.valor}</strong>
+                                                <p>{m.ajuda}</p>
+                                            </div>
+                                        ))}
                                     </div>
+                                </section>
 
+                                {erro && <p className="msg-erro">{erro}</p>}
 
-                                    {/* CARD FUSÃO */}
-                                    <div className="analise-card">
-                                        <div className="card-top">
-                                            <div className="card-icon">F</div>
-                                            <span>FUSÃO DAS ANÁLISES</span>
-                                        </div>
-                                        <h3>{Number(obterScoreFinal()).toFixed(1)}%</h3>
-                                        <div className="barra">
-                                            <div style={{ width: `${Math.min(Number(obterScoreFinal()), 100)}%` }}></div>
-                                        </div>
-                                        <p>Combinação dos resultados para gerar a classificação final.</p>
-                                    </div>
-                                </div>
-
-
-                                {/* GRID DE MÉTRICAS DETALHADAS */}
-                                <div className="section-title metric-title" style={{ marginTop: "30px" }}>
-                                    <span>DETALHAMENTO</span>
-                                    <h2>Métricas da análise</h2>
-                                </div>
-
-
-                                <div className="metricas">
-                                    <div className="metrica">
-                                        <span>Score de pixels</span>
-                                        <strong>{Number(obterPixelScore()).toFixed(2)}</strong>
-                                    </div>
-                                    <div className="metrica">
-                                        <span>Score EOCR</span>
-                                        <strong>{Number(obterScoreGeometria()).toFixed(2)}</strong>
-                                    </div>
-                                    <div className="metrica">
-                                        <span>Score combinado</span>
-                                        <strong>{Number(obterScoreFinal()).toFixed(2)}</strong>
-                                    </div>
-                                    <div className="metrica">
-                                        <span>Continuidade</span>
-                                        <strong>{obterContinuidade()}</strong>
-                                    </div>
-                                    <div className="metrica">
-                                        <span>Maior bloco suspeito</span>
-                                        <strong>{obterMaiorBloco()}</strong>
-                                    </div>
-                                    <div className="metrica">
-                                        <span>Blocos suspeitos</span>
-                                        <strong>{obterBlocosSuspeitos()}</strong>
-                                    </div>
-                                    <div className="metrica">
-                                        <span>Anomalias de vizinhança</span>
-                                        <strong>-</strong>
-                                    </div>
-                                    <div className="metrica">
-                                        <span>Regiões EOCR</span>
-                                        <strong>{obterTotalRegioes()}</strong>
-                                    </div>
-                                    <div className="metrica">
-                                        <span>Regiões suspeitas</span>
-                                        <strong>{obterRegioesSuspeitas()}</strong>
-                                    </div>
-                                </div>
-
-
-                                {/* AÇÕES DO RELATÓRIO */}
-                                <div
-                                    className="acoes-relatorio"
-                                    style={{
-                                        marginTop: "30px",
-                                        textAlign: "center",
-                                        display: "flex",
-                                        justifyContent: "center",
-                                        gap: "15px",
-                                        flexWrap: "wrap"
-                                    }}
-                                >
-
-                                    {/* BOTÃO BAIXAR PDF */}
-                                    <button
-                                        className="btn-acao"
-                                        onClick={baixarPDF}
-                                        disabled={gerandoPDF}
-                                    >
-                                        <FaFilePdf style={{ marginRight: "8px" }} />
-
-                                        {gerandoPDF
-                                            ? "Gerando PDF..."
-                                            : "Baixar relatório PDF"
-                                        }
+                                <div className="acoes-relatorio">
+                                    <button className="btn-acao" onClick={baixarPDF} disabled={gerandoPDF}>
+                                        <FaFilePdf className="icone-botao" />
+                                        {gerandoPDF ? "Gerando PDF..." : "Baixar relatório PDF"}
                                     </button>
-
-
-                                    {/* BOTÃO VOLTAR */}
                                     <button
-                                        className="btn-acao btn-fechar-rel"
+                                        className="btn-acao btn-secundario"
                                         onClick={() => {
                                             setErro("");
                                             setEtapa("resultado");
                                         }}
                                         disabled={gerandoPDF}
                                     >
-                                        Voltar para o Resultado
+                                        Voltar para o resultado
                                     </button>
-
                                 </div>
-
-                                {/* ERRO AO GERAR PDF */}
-                                {erro && (
-                                    <p
-                                        style={{
-                                            color: "#d9534f",
-                                            marginTop: "15px",
-                                            textAlign: "center",
-                                            fontWeight: "bold"
-                                        }}
-                                    >
-                                        {erro}
-                                    </p>
-                                )}
                             </div>
                         )}
-
 
                     </div>
 
@@ -1456,7 +1267,6 @@ function Analise() {
                         <h3>Status</h3>
                         <hr />
 
-
                         <div className="status-item">
                             <div className={`status-circle ${etapa !== "upload" ? "concluido" : ""}`}>
                                 {etapa !== "upload" && <FaCheck />}
@@ -1464,17 +1274,12 @@ function Analise() {
                             <span>Upload do arquivo</span>
                         </div>
 
-
                         <div className="status-item">
-                            <div
-                                className={`status-circle ${["resultado", "relatorio"].includes(etapa) ? "concluido" : ""
-                                    }`}
-                            >
+                            <div className={`status-circle ${["resultado", "relatorio"].includes(etapa) ? "concluido" : ""}`}>
                                 {["resultado", "relatorio"].includes(etapa) && <FaCheck />}
                             </div>
                             <span>Análise do documento</span>
                         </div>
-
 
                         <div className="status-item">
                             <div className={`status-circle ${etapa === "relatorio" ? "concluido" : ""}`}>
@@ -1484,10 +1289,8 @@ function Analise() {
                         </div>
                     </div>
 
-
                 </div>
             </section>
-
 
             <Footer />
             <BackToTop />
