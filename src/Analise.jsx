@@ -807,6 +807,19 @@ function Analise() {
         }
     ];
 
+    // Passos do card lateral: acompanham a análise individual ou a comparação
+    const passosStatus = modoComparacao
+        ? [
+            { rotulo: "Upload dos documentos", feito: Boolean(arquivo && documento2), andamento: false },
+            { rotulo: "Comparação dos documentos", feito: Boolean(resultadoComparacao), andamento: carregando },
+            { rotulo: "Relatório", feito: detalheComparacao, andamento: false }
+        ]
+        : [
+            { rotulo: "Upload do arquivo", feito: etapa !== "upload", andamento: false },
+            { rotulo: "Análise do documento", feito: ["resultado", "relatorio"].includes(etapa), andamento: carregando },
+            { rotulo: "Relatório", feito: etapa === "relatorio", andamento: false }
+        ];
+
     const infoComparacao = resultadoComparacao
         ? STATUS_COMPARACAO[resultadoComparacao.status] ?? STATUS_COMPARACAO_PADRAO
         : null;
@@ -1267,26 +1280,16 @@ function Analise() {
                         <h3>Status</h3>
                         <hr />
 
-                        <div className="status-item">
-                            <div className={`status-circle ${etapa !== "upload" ? "concluido" : ""}`}>
-                                {etapa !== "upload" && <FaCheck />}
+                        {passosStatus.map((passo) => (
+                            <div className="status-item" key={passo.rotulo}>
+                                <div
+                                    className={`status-circle ${passo.feito ? "concluido" : ""} ${passo.andamento ? "andamento" : ""}`}
+                                >
+                                    {passo.feito ? <FaCheck /> : passo.andamento && <span className="status-loader"></span>}
+                                </div>
+                                <span>{passo.rotulo}</span>
                             </div>
-                            <span>Upload do arquivo</span>
-                        </div>
-
-                        <div className="status-item">
-                            <div className={`status-circle ${["resultado", "relatorio"].includes(etapa) ? "concluido" : ""}`}>
-                                {["resultado", "relatorio"].includes(etapa) && <FaCheck />}
-                            </div>
-                            <span>Análise do documento</span>
-                        </div>
-
-                        <div className="status-item">
-                            <div className={`status-circle ${etapa === "relatorio" ? "concluido" : ""}`}>
-                                {etapa === "relatorio" && <FaCheck />}
-                            </div>
-                            <span>Relatório</span>
-                        </div>
+                        ))}
                     </div>
 
                 </div>

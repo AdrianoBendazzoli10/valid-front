@@ -371,6 +371,10 @@
   border-color: #00A279;
 }
 
+.status-circle.andamento {
+  border-color: #00A279;
+}
+
 
 /* =========================================================
    RESULTADO (LINGUAGEM SIMPLES)
@@ -1413,20 +1417,6 @@
     transform: rotate(360deg);
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-
-  .scanner-loading,
-  .scanner-loading::before,
-  .fake-document,
-  .scanner-line,
-  .scanner-particles span,
-  .pulse-dot,
-  .comparacao-resultado-enter {
-    animation: none;
-  }
-}
-
 
 /* =========================================================
    RESPONSIVIDADE
