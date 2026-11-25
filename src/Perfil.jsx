@@ -241,9 +241,6 @@ function Perfil() {
             <div>
               {/* usuario.nome e usuario.email vêm diretamente da resposta da API */}
               <p className="perfil_nome">{usuario.nome}</p>
-              <p className="perfil_email">{usuario.email}</p>
-              <p className="perfil_telefone">{usuario.telefone}</p>
-              <p className="perfil_dataCadastro">{usuario.dataCadastro}</p>
             </div>
 
           </div>
@@ -367,7 +364,9 @@ function Perfil() {
 
                   <div className="info_item">
                     <span className="info_texto">Data de Cadastro</span>
-                    <span className="info_valor">{usuario.dataCadastro}</span>
+                    <span className="info_valor">
+                    {new Date(usuario.dataCadastro).toLocaleDateString('pt-BR')}
+                    </span>
                   </div>
                 </div>
 
