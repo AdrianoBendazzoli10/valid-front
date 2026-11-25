@@ -10,13 +10,18 @@ import { FaCheck } from "react-icons/fa6";
 
 
 // =========================================================
-// CONFIGURAÇÃO DA API
-// URL única, sem barra no final (evita "//" nas rotas).
-// Em produção, defina VITE_API_URL na hospedagem do front.
+// CONFIGURAÇÃO DAS APIs
+// IA: análise de documentos, comparação, imagens e PDF.
+// Backend: autenticação, usuários e histórico de análises.
 // =========================================================
 const API_URL = (
     import.meta.env.VITE_API_URL ||
     "https://eocr-pixel-mescla-production.up.railway.app"
+).replace(/\/+$/, "");
+
+const BACKEND_API_URL = (
+    import.meta.env.VITE_BACKEND_API_URL ||
+    "https://valid-back.onrender.com"
 ).replace(/\/+$/, "");
 
 const TEMPO_LIMITE_MS = 120000; // 2 minutos
@@ -192,7 +197,7 @@ function Analise() {
             if (token) {
                 try {
                     const salvo = await fetchComTimeout(
-                        `${API_URL}/analises/`,
+                        `${BACKEND_API_URL}/analises/`,
                         {
                             method: "POST",
                             headers: {
